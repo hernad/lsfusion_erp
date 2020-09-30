@@ -2,9 +2,9 @@ MODULE DimensionWriteOff;
 
 REQUIRE Dimension, WriteOff;
 
-EXTEND CLASS Reason : Dimension;
+EXTEND CLASS Reason: Dimension;
 EXTEND CLASS DimensionType {
-    reason 'Причина списания'
+     reason 'Reason for writing off'
 }
-name[Dimension] (Reason dimension) += name(dimension) IF dimension IS Reason;
-dimensionType (Reason dimension) += WHEN dimension IS Reason THEN DimensionType.reason;
+name [Dimension] (Reason dimension) + = name (dimension) IF dimension IS Reason;
+dimensionType (Reason dimension) + = WHEN dimension IS Reason THEN DimensionType.reason;
