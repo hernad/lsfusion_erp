@@ -2,349 +2,351 @@ MODULE ContractLedgerIndividualLegalEntity;
 
 REQUIRE ContractLedger, IndividualLegalEntity, ContractPayment, POSInvoice;
 
-defaultRoundConditionPaymentInstallments  = DATA RoundCondition ();
-nameDefaultRoundConditionPaymentInstallments 'Условия округления рассрочки' = name(defaultRoundConditionPaymentInstallments());
+defaultRoundConditionPaymentInstallments = DATA RoundCondition ();
+nameDefaultRoundConditionPaymentInstallments 'Rounding conditions for installments' = name (defaultRoundConditionPaymentInstallments ());
 
-countContractSkuSupplierCustomer = 
-    GROUP SUM 1 IF dateFrom(ContractSku c) <= DATE dateIn AND NOT dateTo(c) < dateIn
-    BY currency(c), supplier(c), customer(c), dateIn;
+countContractSkuSupplierCustomer =
+    GROUP SUM 1 IF dateFrom (ContractSku c) <= DATE dateIn AND NOT dateTo (c) <dateIn
+    BY currency (c), supplier (c), customer (c), dateIn;
 
-defaultContractSkCurrencyuSupplierCustomer = 
-    GROUP LAST ContractSku c IF dateFrom(c) <= DATE dateIn AND NOT dateTo(c) < dateIn
-    BY currency(c), supplier(c), customer(c), dateIn;
+defaultContractSkCurrencyuSupplierCustomer =
+    GROUP LAST ContractSku c IF dateFrom (c) <= DATE dateIn AND NOT dateTo (c) <dateIn
+    BY currency (c), supplier (c), customer (c), dateIn;
 
 EXTEND FORM options
-    PROPERTIES() nameDefaultRoundConditionPaymentInstallments
+    PROPERTIES () nameDefaultRoundConditionPaymentInstallments
 ;
 
 DESIGN options {
     pane {
         paymentInstallmentsy {
-            MOVE PROPERTY(nameDefaultRoundConditionPaymentInstallments());
-        }    
+            MOVE PROPERTY (nameDefaultRoundConditionPaymentInstallments ());
+        }
     }
 }
 
-debtDefaultCurrency 'Долг по документу (основная валюта)'= 
-    IF currency(contract(InContractLedger ledger)) != defaultCurrency() THEN
-        round(debt(ledger, DATE date) * rateOn(defaultTypeExchangeRepaymentInstallments(), currency(contract(ledger)), date), defaultRoundConditionPaymentInstallments())
+debtDefaultCurrency 'Debt by document (base currency)' =
+    IF currency (contract (InContractLedger ledger))! = DefaultCurrency () THEN
+        round (debt (ledger, DATE date) * rateOn (defaultTypeExchangeRepaymentInstallments (), currency (contract (ledger)), date), defaultRoundConditionPaymentInstallments ())
     ELSE
-        debt(ledger, date);
+        debt (ledger, date);
 
-balanceACurrencyPaymentInstallments 'Задолженность по рассрочке(валюта рассрочки)' (LegalEntity legalEntity, DATE date) = 
+balanceACurrencyPaymentInstallments 'Installment debt (installment currency)' (LegalEntity legalEntity, DATE date) =
     GROUP
-    SUM balanceA(Contract contract, date) IF partyB(contract) == legalEntity AND currency(contract) == defaultCurrencyPaymentInstallments();
-balanceADefaultCurrencyCurrencyPaymentInstallments 'Задолженность по рассрочке(основная валюта)' = 
-    GROUP SUM debtDefaultCurrency(InContractLedger ledger, DATE date) IF date(ledger) <= date
-    BY partyBContract(ledger), date;
+    SUM balanceA (Contract contract, date) IF partyB (contract) == legalEntity AND currency (contract) == defaultCurrencyPaymentInstallments ();
+balanceADefaultCurrencyCurrencyPaymentInstallments 'Installment debt (base currency)' =
+    GROUP SUM debtDefaultCurrency (InContractLedger ledger, DATE date) IF date (ledger) <= date
+    BY partyBContract (ledger), date;
 
-balanceADefaultCurrency 'Задолженность по предоплате' (LegalEntity legalEntity, DATE date) = 
+balanceADefaultCurrency 'Prepayment Debt' (LegalEntity legalEntity, DATE date) =
     GROUP
-    SUM balanceA(Contract contract, date) IF partyB(contract) == legalEntity AND currency(contract) == defaultCurrency();        
+    SUM balanceA (Contract contract, date) IF partyB (contract) == legalEntity AND currency (contract) == defaultCurrency ();
     
-backgroundDebtInPaymentInstallments 'Цвет' () = RGB(213,249,185);
-backgroundDebtInPrePayment 'Цвет' () = RGB(255,200,125);
-background 'Цвет' (InContractLedger ledger) = CASE
-    WHEN ledger IS InContractLedger AND currency(contract(ledger)) == defaultCurrencyPaymentInstallments() THEN RGB(213,249,185)
-    WHEN ledger IS InContractLedger AND currency(contract(ledger)) == defaultCurrency() THEN RGB(255,200,125)
+backgroundDebtInPaymentInstallments 'Color' () = RGB (213,249,185);
+backgroundDebtInPrePayment 'Color' () = RGB (255,200,125);
+background 'Color' (InContractLedger ledger) = CASE
+    WHEN ledger IS InContractLedger AND currency (contract (ledger)) == defaultCurrencyPaymentInstallments () THEN RGB (213,249,185)
+    WHEN ledger IS InContractLedger AND currency (contract (ledger)) == defaultCurrency () THEN RGB (255,200,125)
 ;
 
-fiscalSkip 'Отключить ФР'  = DATA LOCAL BOOLEAN (); 
+fiscalSkip 'Disable FR' = DATA LOCAL BOOLEAN ();
 
-FORM inContractledgerPayment 'Погашение задолженности'
-    OBJECTS n = NUMERIC[18,4] PANEL
-    PROPERTIES(n) sumPayment = VALUE
+
+FORM inContractledgerPayment 'Debt repayment'
+    OBJECTS n = NUMERIC [18,4] PANEL
+    PROPERTIES (n) sumPayment = VALUE
           
-    OBJECTS pt = PaymentType PANEL 
-    PROPERTIES(pt) SELECTOR name    
+    OBJECTS pt = PaymentType PANEL
+    PROPERTIES (pt) SELECTOR name
     
-    OBJECTS dt = DATE PANEL 
-    PROPERTIES date = VALUE(dt)
+    OBJECTS dt = DATE PANEL
+    PROPERTIES date = VALUE (dt)
           
-    PROPERTIES fiscalSkip()         
+    PROPERTIES fiscalSkip ()
 ;
 
 DESIGN inContractledgerPayment {
-    NEW topContainer{
-        NEW paymentContainer{
+    NEW topContainer {
+        NEW paymentContainer {
             type = CONTAINERH;
-            MOVE PROPERTY(name(pt)) {
-                caption = 'Тип платежа';
-                fontSize = 32;   
+            MOVE PROPERTY (name (pt)) {
+                caption = 'Payment type';
+                fontSize = 32;
                 panelCaptionAbove = TRUE;
                 charWidth = 15;
-            }                
-            MOVE PROPERTY(sumPayment) {
-                caption = 'Сумма погашения';
-                fontSize = 32;   
+            }
+            MOVE PROPERTY (sumPayment) {
+                caption = 'Amount to be paid';
+                fontSize = 32;
                 panelCaptionAbove = TRUE;
-                charWidth = 15;                
-            } 
-        }   
+                charWidth = 15;
+            }
+        }
         NEW bottomContainer {
             type = CONTAINERH;
-            MOVE PROPERTY(date) {
-                fontSize = 16;   
+            MOVE PROPERTY (date) {
+                fontSize = 16;
                 alignment = STRETCH;
-            }         
-            MOVE PROPERTY(fiscalSkip()) {
-                fontSize = 16;   
+            }
+            MOVE PROPERTY (fiscalSkip ()) {
+                fontSize = 16;
                 alignment = STRETCH;
-            }             
+            }
         }
     }
     MOVE TOOLBARBOX;
     REMOVE TOOLBARLEFT;
-    REMOVE PROPERTY(formRefresh());
+    REMOVE PROPERTY (formRefresh ());
 }
 
-addPayment 'Погасить задолженность'(InContractLedger ledger)  { 
+addPayment 'Pay off debt' (InContractLedger ledger) {
     DIALOG inContractledgerPayment OBJECTS dt INPUT, n INPUT, pt INPUT DO {
-        NEW p = Payment.Payment{
-            operation(p) <- defaultPaymentOperation();
-            date(p) <- dt;
-            contract(p) <- contract(ledger);    
-            payer(p) <- partyBContract(ledger);
-            beneficiary(p) <- partyAContract(ledger);
-            sum(p) <- n;
-            isPosted(p) <- TRUE;
-            IF debt(ledger) >= sumContract(p) THEN {
-                cost(p, ledger) <- sumContract(p);    
-            } ELSE IF debt(ledger) < sumContract(p) THEN{
-                cost(p, ledger) <- debt(ledger);     
-            }             
-            dataFiscalType(p) <- IF sid[PaymentType](pt) == 'card' THEN 1 ELSE 0;  
-            type(p) <- IF sid[PaymentType](pt) == 'card' THEN 1 ELSE 0;            
+        NEW p = Payment.Payment {
+            operation (p) <- defaultPaymentOperation ();
+            date (p) <- dt;
+            contract (p) <- contract (ledger);
+            payer (p) <- partyBContract (ledger);
+            beneficiary (p) <- partyAContract (ledger);
+            sum (p) <- n;
+            isPosted (p) <- TRUE;
+            IF debt (ledger)> = sumContract (p) THEN {
+                cost (p, ledger) <- sumContract (p);
+            } ELSE IF debt (ledger) <sumContract (p) THEN {
+                cost (p, ledger) <- debt (ledger);
+            }
+            dataFiscalType (p) <- IF sid [PaymentType] (pt) == 'card' THEN 1 ELSE 0;
+            type (p) <- IF sid [PaymentType] (pt) == 'card' THEN 1 ELSE 0;
             
-            IF NOT sum(p) > maxSumPaymentReceipt() THEN { 
-                IF (fiscalSkip() OR NOT model(groupCashRegister(currentCashRegister()))) AND currentCashRegister() THEN {          
-                    apply();            
+            IF NOT sum (p)> maxSumPaymentReceipt () THEN {
+                IF (fiscalSkip () OR NOT model (groupCashRegister (currentCashRegister ()))) AND currentCashRegister () THEN {
+                    apply ();
                 }
                 ELSE {
-                    IF model(groupCashRegister(currentCashRegister())) THEN {
-                        check();
-                        IF NOT canceled() THEN {
-                            printReceipt(ledger, p); 
-                            IF printReceiptResult() THEN {
-                                zReport(p) <- currentZReport();                        
-                                apply();
-                            }    
-                        }              
-                    } 
-                    ELSE {
-                        cancel();
+                    IF model (groupCashRegister (currentCashRegister ())) THEN {
+                        check ();
+                        IF NOT canceled () THEN {
+                            printReceipt (ledger, p);
+                            IF printReceiptResult () THEN {
+                                zReport (p) <- currentZReport ();
+                                apply ();
+                            }
+                        }
                     }
-                }  
-            }   ELSE {
-                MESSAGE 'Нельзя вводить сумму платежа по чеку больше разрешенной';
-                cancel();
-            }                                                  
+                    ELSE {
+                        cancel ();
+                    }
+                }
+            } ELSE {
+                MESSAGE 'You cannot enter the amount of payment for the check more than the allowed one';
+                cancel ();
+            }
         }
-    }    
+    }
 }
 
-addReturnPayment 'Вернуть предоплату'(InContractLedger ledger)  { 
+
+addReturnPayment 'Return prepayment' (InContractLedger ledger) {
     DIALOG inContractledgerPayment OBJECTS dt INPUT, n INPUT, pt INPUT DO {
-        NEW p = Payment.Payment{
-            operation(p) <- defaultPaymentOperation();        
-            date(p) <- dt;
-            contract(p) <- contract(ledger);    
-            payer(p) <- partyAContract(ledger);
-            beneficiary(p) <- partyBContract(ledger);
-            sum(p) <- n;
-            isReturn(p) <- TRUE;
-            isPosted(p) <- TRUE;
-            cost(p, ledger) <- -sumContract(p);                
-            dataFiscalType(p) <- IF sid[PaymentType](pt) == 'card' THEN 1 ELSE 0;
-            type(p) <- IF sid[PaymentType](pt) == 'card' THEN 1 ELSE 0;
+        NEW p = Payment.Payment {
+            operation (p) <- defaultPaymentOperation ();
+            date (p) <- dt;
+            contract (p) <- contract (ledger);
+            payer (p) <- partyAContract (ledger);
+            beneficiary (p) <- partyBContract (ledger);
+            sum (p) <- n;
+            isReturn (p) <- TRUE;
+            isPosted (p) <- TRUE;
+            cost (p, ledger) <- -sumContract (p);
+            dataFiscalType (p) <- IF sid [PaymentType] (pt) == 'card' THEN 1 ELSE 0;
+            type (p) <- IF sid [PaymentType] (pt) == 'card' THEN 1 ELSE 0;
             
-            IF NOT sum(p) > maxSumPaymentReceipt() THEN {
-                IF (fiscalSkip() OR NOT model(groupCashRegister(currentCashRegister()))) AND currentCashRegister() THEN {
-                    apply();            
+            IF NOT sum (p)> maxSumPaymentReceipt () THEN {
+                IF (fiscalSkip () OR NOT model (groupCashRegister (currentCashRegister ()))) AND currentCashRegister () THEN {
+                    apply ();
                 }
                 ELSE {
-                    IF model(groupCashRegister(currentCashRegister())) THEN {
-                        check();
-                        IF NOT canceled() THEN {
-                            printReturnReceipt(ledger, p); 
-                            IF printReceiptResult() THEN {
-                                zReport(p) <- currentZReport();                    
-                                apply();
-                            }    
-                        }              
-                    } 
-                    ELSE {
-                        cancel();
+                    IF model (groupCashRegister (currentCashRegister ())) THEN {
+                        check ();
+                        IF NOT canceled () THEN {
+                            printReturnReceipt (ledger, p);
+                            IF printReceiptResult () THEN {
+                                zReport (p) <- currentZReport ();
+                                apply ();
+                            }
+                        }
                     }
-                }  
-            }   ELSE {
-                MESSAGE 'Нельзя вводить сумму платежа по чеку больше разрешенной';
-                cancel();
-            }                                                     
+                    ELSE {
+                        cancel ();
+                    }
+                }
+            } ELSE {
+                MESSAGE 'You cannot enter the amount of payment for the check more than the allowed one';
+                cancel ();
+            }
         }
-    }    
+    }
 }
 
 
-FORM legalEntityPayment 'Внесение предоплаты'
+FORM legalEntityPayment 'Prepayment'
     OBJECTS l = LegalEntity PANEL
-    PROPERTIES(l) SELECTOR name
-    FILTERS isCompany(l)
+    PROPERTIES (l) SELECTOR name
+    FILTERS isCompany (l)
 
-    OBJECTS n = NUMERIC[18,4] PANEL
-    PROPERTIES(n) sumPayment = VALUE
+    OBJECTS n = NUMERIC [18,4] PANEL
+    PROPERTIES (n) sumPayment = VALUE
 
-    OBJECTS dt = DATE PANEL 
-    PROPERTIES date = VALUE(dt) 
+    OBJECTS dt = DATE PANEL
+    PROPERTIES date = VALUE (dt)
     
     OBJECTS pc = PaymentCondition PANEL
-    PROPERTIES(pc) SELECTOR description        
+    PROPERTIES (pc) SELECTOR description
 ;
 
 DESIGN legalEntityPayment {
-    NEW topContainer{
-        NEW paymentContainer{
+    NEW topContainer {
+        NEW paymentContainer {
             type = CONTAINERH;
-            MOVE PROPERTY(name(l)) {
-                caption = 'Компания';
-                fontSize = 32;   
+            MOVE PROPERTY (name (l)) {
+                caption = 'Company';
+                fontSize = 32;
                 panelCaptionAbove = TRUE;
                 charWidth = 15;
-            }                
-            MOVE PROPERTY(sumPayment) {
-                caption = 'Сумма предоплаты';
-                fontSize = 32;   
+            }
+            MOVE PROPERTY (sumPayment) {
+                caption = 'Prepayment Amount';
+                fontSize = 32;
                 panelCaptionAbove = TRUE;
-                charWidth = 15;                
-            } 
-        }   
+                charWidth = 15;
+            }
+        }
         NEW bottomContainer {
             type = CONTAINERH;
-            MOVE PROPERTY(date) {
+            MOVE PROPERTY (date) {
                 fontSize = 16;
             }
             type = CONTAINERH;
-            MOVE PROPERTY(description(pc)) {
-                caption = 'Условия рассрочки';
-                fontSize = 16;   
+            MOVE PROPERTY (description (pc)) {
+                caption = 'Terms of Installment';
+                fontSize = 16;
                 charWidth = 20;
-            }            
+            }
         }
     }
     MOVE TOOLBARBOX;
     REMOVE TOOLBARLEFT;
-    REMOVE PROPERTY(formRefresh());
+    REMOVE PROPERTY (formRefresh ());
 }
 
 localPaymentCondition = DATA LOCAL PaymentCondition ();
 localSupplier = DATA LOCAL LegalEntity ();
 
-addPrePayment 'Внести предоплату'(LegalEntity legalEntity)  { 
-    localPaymentCondition() <- paymentCondition('0');
-    localSupplier() <- legalEntity(currentUser());
+addPrePayment 'Make a prepayment' (LegalEntity legalEntity) {
+    localPaymentCondition () <- paymentCondition ('0');
+    localSupplier () <- legalEntity (currentUser ());
 
-    DIALOG legalEntityPayment OBJECTS l = localSupplier() NULL, pc = localPaymentCondition() INPUT, dt INPUT, l INPUT, n INPUT DO {
+    DIALOG legalEntityPayment OBJECTS l = localSupplier () NULL, pc = localPaymentCondition () INPUT, dt INPUT, l INPUT, n INPUT DO {
         NEW p = Payment.Payment {
-            operation(p) <- defaultPaymentOperation();        
-            date(p) <- dt;
-            payer(p) <- legalEntity;
-            beneficiary(p) <- l;
-            sum(p) <- n;
-            IF countContractSkuSupplierCustomer(defaultCurrency(), l, legalEntity, dt) >= 1 THEN {
-                contract(p) <- defaultContractSkCurrencyuSupplierCustomer(defaultCurrency(), l, legalEntity, dt);
+            operation (p) <- defaultPaymentOperation ();
+            date (p) <- dt;
+            payer (p) <- legalEntity;
+            beneficiary (p) <- l;
+            sum (p) <- n;
+            IF countContractSkuSupplierCustomer (defaultCurrency (), l, legalEntity, dt)> = 1 THEN {
+                contract (p) <- defaultContractSkCurrencyuSupplierCustomer (defaultCurrency (), l, legalEntity, dt);
             } ELSE {
                 NEW c = UserContractSku {
-                    supplier(c) <- l;
-                    customer(c) <- legalEntity;
-                    dateFrom(c) <- dt;
-                    currency(c) <- defaultCurrency();
-                    type(c) <- ContractSkuType.sale;
-                    paymentCondition(c) <- pc;
-                    contract(p) <- c;            
+                    supplier (c) <- l;
+                    customer (c) <- legalEntity;
+                    dateFrom (c) <- dt;
+                    currency (c) <- defaultCurrency ();
+                    type (c) <- ContractSkuType.sale;
+                    paymentCondition (c) <- pc;
+                    contract (p) <- c;
                 }
-            }    
-            isPosted(p) <- TRUE;
-            apply();
+            }
+            isPosted (p) <- TRUE;
+            apply ();
         }
     }
 }
 
 EXTEND FORM contractLedger
-    FILTERGROUP filters 
-        FILTER 'Без ф.л.' shortNameOwnership(partyB(c)) != 'Ф.Л.' 'F7' DEFAULT 
+    FILTERGROUP filters
+        FILTER 'Without F.L.' shortNameOwnership (partyB (c))! = 'F.L.' 'F7' DEFAULT
 ;
 
-FORM contractLedgerLegalEntity 'Управление задолженностями покупателей'
+FORM contractLedgerLegalEntity 'Customer debt management'
     OBJECTS d = DATE PANEL
-    PROPERTIES(d) date = VALUE
+    PROPERTIES (d) date = VALUE
 
     OBJECTS l = LegalEntity
-    PROPERTIES(l) READONLY name, passportNumber, phone[Contact], postAddress[Contact], email[Contact]
-    PROPERTIES(l, d) READONLY balanceACurrencyPaymentInstallments BACKGROUND backgroundDebtInPaymentInstallments(),
-                              balanceADefaultCurrencyCurrencyPaymentInstallments BACKGROUND backgroundDebtInPaymentInstallments(),
-                              balanceADefaultCurrency BACKGROUND backgroundDebtInPrePayment()
-    PROPERTIES addPrePayment(l) TOOLBAR 
-    FILTERGROUP filters1 
-        FILTER 'С долгами' balanceACurrencyPaymentInstallments(l, d) OR 
-                           balanceADefaultCurrencyCurrencyPaymentInstallments(l, d) OR 
-                           balanceADefaultCurrency(l, d) 'F7' DEFAULT         
-    FILTERGROUP filters2 
-        FILTER 'Только ф.л.' shortNameOwnership(l) == 'Ф.Л.' 'F7'
-        FILTER 'Только покупатели' isCustomer(l) 'F8' DEFAULT 
+    PROPERTIES (l) READONLY name, passportNumber, phone [Contact], postAddress [Contact], email [Contact]
+    PROPERTIES (l, d) READONLY balanceACurrencyPaymentInstallments BACKGROUND backgroundDebtInPaymentInstallments (),
+                              balanceADefaultCurrencyCurrencyPaymentInstallments BACKGROUND backgroundDebtInPaymentInstallments (),
+                              balanceADefaultCurrency BACKGROUND backgroundDebtInPrePayment ()
+    PROPERTIES addPrePayment (l) TOOLBAR
+    FILTERGROUP filters1
+        FILTER 'With debts' balanceACurrencyPaymentInstallments (l, d) OR
+                           balanceADefaultCurrencyCurrencyPaymentInstallments (l, d) OR
+                           balanceADefaultCurrency (l, d) 'F7' DEFAULT
+    FILTERGROUP filters2
+        FILTER 'Only F.L.' shortNameOwnership (l) == 'F.L.' 'F7'
+        FILTER 'Buyers only' isCustomer (l) 'F8' DEFAULT
     
     OBJECTS ic = InContractLedger LAST
-    PROPERTIES(ic) READONLY date, description, nameSupplierStock, sum
-    PROPERTIES(ic, d) READONLY BACKGROUND background(ic) debt, debtDefaultCurrency
-    PROPERTIES(ic)  addPayment, addReturnPayment
-    PROPERTIES(ic) NEWSESSION EDIT
-    ORDERS date(ic)
-    FILTERS active(ic),
-            partyBContract(ic) == l
-    FILTERGROUP filters3 
-        FILTER 'Неоплаченные' debt(ic, d) 'F6'
-    FILTERGROUP filters4 
-        FILTER 'На дату' date(ic) <= d 'F5' DEFAULT        
+    PROPERTIES (ic) READONLY date, description, nameSupplierStock, sum
+    PROPERTIES (ic, d) READONLY BACKGROUND background (ic) debt, debtDefaultCurrency
+    PROPERTIES (ic) addPayment, addReturnPayment
+    PROPERTIES (ic) NEWSESSION EDIT
+    ORDERS date (ic)
+    FILTERS active (ic),
+            partyBContract (ic) == l
+    FILTERGROUP filters3
+        FILTER 'Unpaid' debt (ic, d) 'F6'
+    FILTERGROUP filters4
+        FILTER 'As of date' date (ic) <= d 'F5' DEFAULT
 
     OBJECTS oc = OutContractLedger LAST
-    PROPERTIES(oc) READONLY date, description, sum
-    PROPERTIES(oc, d) READONLY costedInContractLedger
-    PROPERTIES READONLY cost(oc, ic)
-    PROPERTIES(oc) NEWSESSION EDIT    
-    ORDERS date(oc)
-    FILTERS active(oc),
-            partyBContract(oc) == l
-    FILTERGROUP filters5 
-        FILTER 'Нерасписанные' NOT costedInContractLedger(oc, d) == sum(oc) 'F9'
-    FILTERGROUP filters6 
-        FILTER 'На дату' date(oc) <= d 'F10' DEFAULT
+    PROPERTIES (oc) READONLY date, description, sum
+    PROPERTIES (oc, d) READONLY costedInContractLedger
+    PROPERTIES READONLY cost (oc, ic)
+    PROPERTIES (oc) NEWSESSION EDIT
+    ORDERS date (oc)
+    FILTERS active (oc),
+            partyBContract (oc) == l
+    FILTERGROUP filters5
+        FILTER 'Unwritten' NOT costedInContractLedger (oc, d) == sum (oc) 'F9'
+    FILTERGROUP filters6
+        FILTER 'As of date' date (oc) <= d 'F10' DEFAULT
 ;
 
 DESIGN contractLedgerLegalEntity {
     BOX {
         type = CONTAINERV;
-        MOVE BOX(d);
-        NEW topContainer{
+        MOVE BOX (d);
+        NEW topContainer {
             type = SPLITV;
             fill = 1;
-            MOVE BOX(l);
+            MOVE BOX (l);
             NEW contractLedgerContainer {
                 fill = 2;
                 type = SPLITH;
-                caption = 'Взаиморасчеты';
-                MOVE BOX(ic);
+                caption = 'Settlements';
+                MOVE BOX (ic);
                 NEW rightTabContainer {
                     type = TABBED;
                     fill = 1;
-                    MOVE BOX(oc);                
+                    MOVE BOX (oc);
                 }
             }
         }
-    }    
+    }
     MOVE TOOLBARBOX;
 }
 
 NAVIGATOR {
-    contractDashboardNavigator{
+    contractDashboardNavigator {
         NEW contractLedgerLegalEntity;
     }
 }
