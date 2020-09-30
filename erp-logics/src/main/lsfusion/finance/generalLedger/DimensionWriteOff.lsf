@@ -2,7 +2,7 @@ MODULE DimensionWriteOff;
 
 REQUIRE Dimension, WriteOff;
 
-EXTEND CLASS Reason: Dimension;
+EXTEND CLASS Reason : Dimension;
 EXTEND CLASS DimensionType {
      reason 'Reason for writing off'
 }
