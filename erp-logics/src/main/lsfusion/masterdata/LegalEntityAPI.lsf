@@ -5,25 +5,25 @@ REQUIRE LegalEntity, API;
 NAMESPACE LegalEntity;
 
 getLegalEntitiesSupplier () {
-    IF limitAccess() AND NOT access(currentUser(), Category.masterData) THEN {
-        EXPORT FROM 'Нет доступа к API';
-        RETURN;
-    }
-    EXPORT JSON FROM id = LegalEntity l, name(l) WHERE active(l) AND isSupplier(l);
-} @@api;
+     IF limitAccess () AND NOT access (currentUser (), Category.masterData) THEN {
+         EXPORT FROM 'No access to API';
+         RETURN;
+     }
+     EXPORT JSON FROM id = LegalEntity l, name (l) WHERE active (l) AND isSupplier (l);
+} @@ api;
 
 getLegalEntitiesCustomer () {
-    IF limitAccess() AND NOT access(currentUser(), Category.masterData) THEN {
-        EXPORT FROM 'Нет доступа к API';
-        RETURN;
-    }
-    EXPORT JSON FROM id = LegalEntity l, name(l) WHERE active(l) AND isCustomer(l);
-} @@api;
+     IF limitAccess () AND NOT access (currentUser (), Category.masterData) THEN {
+         EXPORT FROM 'No access to API';
+         RETURN;
+     }
+     EXPORT JSON FROM id = LegalEntity l, name (l) WHERE active (l) AND isCustomer (l);
+} @@ api;
 
 getLegalEntitiesCompany () {
-    IF limitAccess() AND NOT access(currentUser(), Category.masterData) THEN {
-        EXPORT FROM 'Нет доступа к API';
-        RETURN;
-    }
-    EXPORT JSON FROM id = LegalEntity l, name(l) WHERE active(l) AND isCompany(l);
-} @@api;
+     IF limitAccess () AND NOT access (currentUser (), Category.masterData) THEN {
+         EXPORT FROM 'No access to API';
+         RETURN;
+     }
+     EXPORT JSON FROM id = LegalEntity l, name (l) WHERE active (l) AND isCompany (l);
+} @@ api;
