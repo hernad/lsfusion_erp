@@ -2,79 +2,76 @@ MODULE RebateAgreement;
 REQUIRE Agreement;
 NAMESPACE Rebate;
 
-//---------------- Ретро-бонусы-----------------//
+// ---------------- Retro bonuses ----------------- //
 
-CLASS RebateType 'Вид ретро-бонусов' {
-    perc 'Процент от суммы поступлений'
+CLASS RebateType 'Type of retro bonuses' {
+    perc 'Percentage of proceeds'
 }
-TABLE rebateType (RebateType); 
+TABLE rebateType (RebateType);
 
-dataName 'Наименование' = DATA STRING[255] (RebateType) CHARWIDTH 20;
-name (RebateType t) = OVERRIDE dataName(t), staticCaption(t);
+dataName 'Name' = DATA STRING [255] (RebateType) CHARWIDTH 20;
+name (RebateType t) = OVERRIDE dataName (t), staticCaption (t);
 
 
-FORM rebateType 'Вид ретро-бонусов'
-    OBJECTS t=RebateType PANEL
-    PROPERTIES(t) name
+FORM rebateType 'Type of retro bonuses'
+    OBJECTS t = RebateType PANEL
+    PROPERTIES (t) name
     EDIT RebateType OBJECT t
 ;
 
-FORM rebateTypes 'Вид ретро-бонусов'
-    OBJECTS t=RebateType
-    PROPERTIES(t) NEWSESSION name READONLY, deleteb=DELETE 
-    PROPERTIES(t) NEWSESSION NEW, EDIT
-    ORDERS name(t)
+FORM rebateTypes 'Type of retro bonuses'
+    OBJECTS t = RebateType
+    PROPERTIES (t) NEWSESSION name READONLY, deleteb = DELETE
+    PROPERTIES (t) NEWSESSION NEW, EDIT
+    ORDERS name (t)
     LIST RebateType OBJECT t
 ;
-DESIGN rebateTypes { BOX { size = (600, 400); } }
+DESIGN rebateTypes {BOX {size = (600, 400); }}
 
 rebateType = DATA RebateType (Agreement);
-nameType 'Вид ретро-бонусов' (Agreement d) = name(rebateType(d));
+nameType 'Type of retro bonuses' (Agreement d) = name (rebateType (d));
 
-includeVATRebate 'Включать НДС' = DATA BOOLEAN (Agreement);
+includeVATRebate 'Include VAT' = DATA BOOLEAN (Agreement);
 
-CLASS Condition 'Условия бонусов';
+CLASS Condition 'Terms of bonuses';
 TABLE condition (Condition);
 
-name 'Наименование' = DATA STRING[50](Condition);
+name 'Name' = DATA STRING [50] (Condition);
 
 agreement = DATA Agreement (Condition) NONULL DELETE;
 
-fromSum 'Сумма от' =  DATA NUMERIC[16,4](Condition);
-toSum 'Сумма до' =  DATA NUMERIC[16,4](Condition);
-perc '%' =  DATA NUMERIC[10,4](Condition);
+fromSum 'Sum from' = DATA NUMERIC [16,4] (Condition);
+toSum 'Sum to' = DATA NUMERIC [16.4] (Condition);
+perc '%' = DATA NUMERIC [10.4] (Condition);
 
 defaultCondition (sum, agreement) =
     GROUP LAST Condition c
-          ORDER fromSum(c), c
-          WHERE NUMERIC[18,4] nsum >= fromSum(c) AND NOT nsum >= toSum(c)
-          BY nsum AS NUMERIC[18,4], agreement(c);
+          ORDER fromSum (c), c
+          WHERE NUMERIC [18,4] nsum> = fromSum (c) AND NOT nsum> = toSum (c)
+          BY nsum AS NUMERIC [18,4], agreement (c);
           
-percDefaultCondition '%' (NUMERIC[18,4] sum, Agreement a) = perc(defaultCondition(sum,a));
+percDefaultCondition '%' (NUMERIC [18,4] sum, Agreement a) = perc (defaultCondition (sum, a));
 
-@defineDocumentDetailIndex(agreement, Condition);
+@defineDocumentDetailIndex (agreement, Condition);
 
 EXTEND FORM agreement
-    PROPERTIES (a) nameType, includeVATRebate SHOWIF rebateType(a)
+    PROPERTIES (a) nameType, includeVATRebate SHOWIF rebateType (a)
     
     OBJECTS cn = Condition
-    PROPERTIES (cn) SHOWIF rebateType(a) index, fromSum, toSum, perc,  NEW, DELETE
-    FILTERS agreement(cn) == a
+    PROPERTIES (cn) SHOWIF rebateType (a) index, fromSum, toSum, perc, NEW, DELETE
+    FILTERS agreement (cn) == a
 ;
 DESIGN agreement {
     tabContainer {
         NEW rebate {
-            caption = 'Ретро-бонусы';
+            caption = 'Retro Bonuses';
             fill = 1;
             NEW rebateTop {
                 type = CONTAINERH;
-                MOVE PROPERTY (nameType(a));
-                MOVE PROPERTY (includeVATRebate(a));
+                MOVE PROPERTY (nameType (a));
+                MOVE PROPERTY (includeVATRebate (a));
             }
-            MOVE BOX(cn);
+            MOVE BOX (cn);
         }
     }
 }
-
- 
-
