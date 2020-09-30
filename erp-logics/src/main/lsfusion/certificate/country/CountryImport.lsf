@@ -2,70 +2,70 @@ MODULE CountryImport;
 
 REQUIRE SkuLedger;
 
-countryImport = ABSTRACT Country(Batch) MATERIALIZED;
-nameCountryImport 'Страна ввоза' (Batch b) = name(countryImport(b)) CHARWIDTH 15;
-prevCountryImport (Batch batch) = PREV(countryImport(batch));
+countryImport = ABSTRACT Country (Batch) MATERIALIZED;
+nameCountryImport 'Country of Import' (Batch b) = name (countryImport (b)) CHARWIDTH 15;
+prevCountryImport (Batch batch) = PREV (countryImport (batch));
 
-META defineDocumentCountryImport(document, object, showProp)
+META defineDocumentCountryImport (document, object, showProp)
 
-    EXTEND FORM user###document
-        OBJECTS di = User###document##Detail GRID
-        PROPERTIES (di) READONLY SHOWIF showProp(object) index, idBarcodeSku, nameSku,
+    EXTEND FORM user ### document
+        OBJECTS di = User ### document ## Detail GRID
+        PROPERTIES (di) READONLY SHOWIF showProp (object) index, idBarcodeSku, nameSku,
                         nameBatch
-        FILTERS user###document(di) == object
+        FILTERS user ### document (di) == object
     ;
 
-    DESIGN user###document{
-        specificationBox{
-            NEW countryImportContainer AFTER BOX(d) {
-                caption = 'Страна ввоза';
-                NEW headerCountryimportContainer { type = CONTAINERH; }
-                MOVE BOX(di);
+    DESIGN user ### document {
+        specificationBox {
+            NEW countryImportContainer AFTER BOX (d) {
+                caption = 'Country of Import';
+                NEW headerCountryimportContainer {type = CONTAINERH; }
+                MOVE BOX (di);
             }
         }
     }
 END
 
 
-META defineDocumentCountryImport(prop, document, object, caption)
-    @defineDocumentCountryImport(prop, ###prop, document, object, caption);
+META defineDocumentCountryImport (prop, document, object, caption)
+    @defineDocumentCountryImport (prop, ### prop, document, object, caption);
 END
 
-META defineDocumentCountryImport(prop, propClass, document, object, caption, showProp)
+META defineDocumentCountryImport (prop, propClass, document, object, caption, showProp)
 
-    prop = ABSTRACT propClass (###document##Detail);
-    name###prop caption (###document##Detail detail) = name(prop(detail));
+    prop = ABSTRACT propClass (### document ## Detail);
+    name ### prop caption (### document ## Detail detail) = name (prop (detail));
 
-    prop = DATA propClass (User###document);
-    name###prop caption (User###document document) = name(prop(document));
+    prop = DATA propClass (User ### document);
+    name ### prop caption (User ### document document) = name (prop (document));
 
-    data###prop = DATA propClass (User###document##Detail);
-    prop (User###document##Detail detail) =
-        OVERRIDE data###prop(detail), prop(user###document(detail));
-    prop(User###document##Detail detail) += prop(detail);
+    data ### prop = DATA propClass (User ### document ## Detail);
+    prop (User ### document ## Detail detail) =
+        OVERRIDE data ### prop (detail), prop (user ### document (detail));
+    prop (User ### document ## Detail detail) + = prop (detail);
 
-    name###prop caption (User###document##Detail detail) = name(prop(detail));
+    name ### prop caption (User ### document ## Detail detail) = name (prop (detail));
 
-    overCopy(User###document##Detail d, User###document##Detail detail) + {       
-        data###prop(d) <- data###prop(detail);
-    } 
+    overCopy (User ### document ## Detail d, User ### document ## Detail detail) + {
+        data ### prop (d) <- data ### prop (detail);
+    }
     
-    backgroup###prop##User = ABSTRACT COLOR (###document##Detail);
+    backgroup ### prop ## User = ABSTRACT COLOR (### document ## Detail);
 
-    EXTEND FORM user###document
-        PROPERTIES(object) name###prop SHOWIF showProp(object)
-        PROPERTIES(d) SHOWIF showProp(object) BACKGROUND backgroup###prop##User(d) name###prop
-        PROPERTIES(di) SHOWIF showProp(object) BACKGROUND backgroup###prop##User(di) name###prop
+    EXTEND FORM user ### document
+        PROPERTIES (object) name ### prop SHOWIF showProp (object)
+        PROPERTIES (d) SHOWIF showProp (object) BACKGROUND backgroup ### prop ## User (d) name ### prop
+        PROPERTIES (di) SHOWIF showProp (object) BACKGROUND backgroup ### prop ## User (di) name ### prop
     ;
 
-    DESIGN user###document {
+    DESIGN user ### document {
         headerCountryimportContainer {
-            MOVE PROPERTY(name###prop(object));
+            MOVE PROPERTY (name ### prop (object));
         }
     }
 
-    EXTEND FORM document##s
-        PROPERTIES(d) SHOWIF showProp(object) READONLY name###prop
+    EXTEND FORM document ## s
+        PROPERTIES (d) SHOWIF showProp (object) READONLY name ### prop
     ;
 END
 
