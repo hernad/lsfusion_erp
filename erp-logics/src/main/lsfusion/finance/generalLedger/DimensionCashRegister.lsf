@@ -2,12 +2,12 @@ MODULE DimensionCashRegister;
 
 REQUIRE Dimension, CashRegisterStore;
 
-//-- Employee
-EXTEND CLASS CashRegister : Dimension;
+// - Employee
+EXTEND CLASS CashRegister: Dimension;
 EXTEND CLASS DimensionType {
-    cashRegister 'Касса'
+     cashRegister 'Cashier'
 }
-name (CashRegister dimension) += ISTRING[255](shortDescription(dimension)) IF dimension IS CashRegister;
-dimensionType (CashRegister dimension) += WHEN dimension IS CashRegister THEN DimensionType.cashRegister;
+name (CashRegister dimension) + = ISTRING [255] (shortDescription (dimension)) IF dimension IS CashRegister;
+dimensionType (CashRegister dimension) + = WHEN dimension IS CashRegister THEN DimensionType.cashRegister;
 
-id(CashRegister dimension) += ISTRING[100](npp[Machinery](dimension)) IF dimension IS CashRegister;
+id (CashRegister dimension) + = ISTRING [100] (npp [Machinery] (dimension)) IF dimension IS CashRegister;
