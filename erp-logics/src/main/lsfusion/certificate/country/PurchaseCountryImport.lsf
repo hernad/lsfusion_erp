@@ -4,27 +4,27 @@ REQUIRE PurchaseShipment, CountryImport;
 
 NAMESPACE Purchase;
 
-@defineOperationProperty(showCountryImport, 'Страна ввоза', commonContainer);
-showCountryImport 'Страна ввоза' (UserInvoice i) = showCountryImport(operation(i));
-showCountryImport 'Страна ввоза' (UserShipment s) = showCountryImport(operation(s));
+@defineOperationProperty (showCountryImport, 'Country of Import', commonContainer);
+showCountryImport 'Country of import' (UserInvoice i) = showCountryImport (operation (i));
+showCountryImport 'Country of Import' (UserShipment s) = showCountryImport (operation (s));
 
 
-@defineDocumentCountryImport(invoice, i, showCountryImport);
+@defineDocumentCountryImport (invoice, i, showCountryImport);
 
-@defineDocumentCountryImport(countryImport, Country, invoice, i, 'Страна ввоза', showCountryImport) ;
+@defineDocumentCountryImport (countryImport, Country, invoice, i, 'Country of Import', showCountryImport);
 
-@defineDocumentCountryImport(shipment, s, showCountryImport);
-@defineDocumentCountryImport(countryImport, Country, shipment, s, 'Страна ввоза', showCountryImport);
+@defineDocumentCountryImport (shipment, s, showCountryImport);
+@defineDocumentCountryImport (countryImport, Country, shipment, s, 'Country of Import', showCountryImport);
 
-// Проставляем автоматически сертификат от строки инвойса
-WHEN CHANGED(countryImport(invoiceDetail(UserShipmentDetail d))) AND 
-     NOT CHANGED(countryImport(d)) DO
-     dataCountryImport(d) <- countryImport(invoiceDetail(d)); 
+// Automatically affix a certificate from the invoice line
+WHEN CHANGED (countryImport (invoiceDetail (UserShipmentDetail d))) AND
+     NOT CHANGED (countryImport (d)) DO
+     dataCountryImport (d) <- countryImport (invoiceDetail (d));
      
      
-countryImport(InvoiceShipmentDetail detail) += countryImport(invoiceDetail(detail));
+countryImport (InvoiceShipmentDetail detail) + = countryImport (invoiceDetail (detail));
 
-overFillInvoice(UserShipmentDetail s, InvoiceDetail i) + { 
-    dataCountryImport(s) <- countryImport(i);
+overFillInvoice (UserShipmentDetail s, InvoiceDetail i) + {
+    dataCountryImport (s) <- countryImport (i);
 }
-countryImport (ShipmentBatch batch) += countryImport(shipmentDetail(batch));
+countryImport (ShipmentBatch batch) + = countryImport (shipmentDetail (batch));
