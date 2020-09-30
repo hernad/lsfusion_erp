@@ -2,11 +2,11 @@ MODULE DimensionSku;
 
 REQUIRE Dimension, Sku;
 
-EXTEND CLASS Sku : Dimension;
+EXTEND CLASS Sku: Dimension;
 EXTEND CLASS DimensionType {
-    sku 'Товар'
+     sku 'Product'
 }
-name (Sku dimension) += name(dimension);
-dimensionType (Sku dimension) += WHEN dimension IS Sku THEN DimensionType.sku;
+name (Sku dimension) + = name (dimension);
+dimensionType (Sku dimension) + = WHEN dimension IS Sku THEN DimensionType.sku;
 
-id(Sku dimension) += ISTRING[20](id(dimension));
+id (Sku dimension) + = ISTRING [20] (id (dimension));
