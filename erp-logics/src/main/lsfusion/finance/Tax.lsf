@@ -2,166 +2,166 @@ MODULE Tax;
 
 REQUIRE System, Utils, Historizable, Hierarchy, Country, Finance;
 
-// ---------------------------------- Налог --------------------------------------- //
+// ---------------------------------- Tax ------------- -------------------------- //
 
-CLASS Tax 'Налоги' {
-    taxVAT 'НДС',
-    taxNP 'Налог с продаж'
+CLASS Tax 'Taxes' {
+    taxVAT 'VAT',
+    taxNP 'Sales Tax'
 }
 FORM taxDialog
     OBJECTS t = Tax
-    PROPERTIES(t) staticCaption
+    PROPERTIES (t) staticCaption
     LIST Tax OBJECT t
 ;
 
-// ---------------------------------- Шкала налога --------------------------------------- //
+// ---------------------------------- Tax scale ------------ --------------------------- //
 
-CLASS Range 'Шкала';
-TABLE range(Range);
-number 'Шкала' = DATA INTEGER (Range) IN id CHARWIDTH 4;
+CLASS Range 'Scale';
+TABLE range (Range);
+number 'Scale' = DATA INTEGER (Range) IN id CHARWIDTH 4;
 
 tax = DATA Tax (Range) NONULL;
-nameTax 'Налог' (Range range) = staticCaption(tax(range)) IN id;
+nameTax 'Tax' (Range range) = staticCaption (tax (range)) IN id;
 
 country = DATA Country (Range) NONULL AUTOSET;
-nameCountry 'Страна' (Range range) = name(country(range)) IN id;
+nameCountry 'Country' (Range range) = name (country (range)) IN id;
 
-countRange 'Кол-во шкал' (tax, country) = GROUP SUM 1 IF Range range IS Range BY tax(range), country(range);
+countRange 'Number of scales' (tax, country) = GROUP SUM 1 IF Range range IS Range BY tax (range), country (range);
 
-maxDataRange(Tax tax, Country country) = OVERRIDE [ GROUP MAX number(Range range) BY tax(range), country(range)](tax, country), 0 IF tax IS Tax AND country IS Country;
-addNewRange 'Добавить шкалу'(Tax tax, Country country)  { 
+maxDataRange (Tax tax, Country country) = OVERRIDE [GROUP MAX number (Range range) BY tax (range), country (range)] (tax, country), 0 IF tax IS Tax AND country IS Country;
+addNewRange 'Add scale' (Tax tax, Country country) {
     NEW r = Range {
-        number(r) <- maxDataRange(tax, country) + 1;
-        country(r) <- country;
-        tax(r) <- tax;
+        number (r) <- maxDataRange (tax, country) + 1;
+        country (r) <- country;
+        tax (r) <- tax;
     }
 } TOOLBAR IMAGE 'add.png';
 
-CLASS RangeType 'Для каких подразделений действует шкала' {
-    common 'Общий',
-    units 'Для подразделений'
+CLASS RangeType 'For which units the scale is valid' {
+    common 'Common',
+    units 'For units'
 }
-FORM rangeTypes 'Тип шкалы'
+FORM rangeTypes 'Type of scale'
     OBJECTS t = RangeType
-    PROPERTIES(t) READONLY staticCaption
+    PROPERTIES (t) READONLY staticCaption
     LIST RangeType OBJECT t
 ;
 
-//extraRange 'Дополнительная' = DATA BOOLEAN (Range);
+// extraRange 'Additional' = DATA BOOLEAN (Range);
 
 rangeType = DATA RangeType (Range) NONULL;
-nameRangeType 'Тип шкалы' = staticCaption(rangeType(Range range)) IN base;
+nameRangeType 'Scale type' = staticCaption (rangeType (Range range)) IN base;
 
-isUnitsType(Range range) = rangeType(range) == RangeType.units;
-isCommonssType(Range range) = rangeType(range) == RangeType.common;
+isUnitsType (Range range) = rangeType (range) == RangeType.units;
+isCommonssType (Range range) = rangeType (range) == RangeType.common;
 
-rangeType(Range range) <- RangeType.common WHEN SET(range IS Range);     /// потом согласовать, какое значение должно быть по умолчанию ///
+rangeType (Range range) <- RangeType.common WHEN SET (range IS Range); /// then agree on which value should be the default ///
 
-// ----------------------------- Разбиение шкалы для подразделений ------------------------------------- //
+// ----------------------------- Splitting the scale for divisions --------------- ---------------------- //
 
-CLASS ABSTRACT TaxUnitGroup 'Группа налогового субъекта';
-TABLE taxUnitGroup(TaxUnitGroup);
+CLASS ABSTRACT TaxUnitGroup 'Tax subject group';
+TABLE taxUnitGroup (TaxUnitGroup);
 
-name 'Наименование' = ABSTRACT ISTRING[150](TaxUnitGroup);
+name 'Name' = ABSTRACT ISTRING [150] (TaxUnitGroup);
 
-TABLE taxUnitGroupTaxUnitGroup(TaxUnitGroup, TaxUnitGroup);
+TABLE taxUnitGroupTaxUnitGroup (TaxUnitGroup, TaxUnitGroup);
 @defineHierarchyAbstract (taxUnitGroup);
 
-CLASS ABSTRACT TaxUnit 'Налоговый субъект';
-TABLE taxUnit(TaxUnit);
+CLASS ABSTRACT TaxUnit 'Tax subject';
+TABLE taxUnit (TaxUnit);
 
 taxUnitGroup = ABSTRACT TaxUnitGroup (TaxUnit) MATERIALIZED;
-description 'Название налогового субъекта' = ABSTRACT ISTRING[255] (TaxUnit) MATERIALIZED;
+description 'Name of the tax subject' = ABSTRACT ISTRING [255] (TaxUnit) MATERIALIZED;
 
 TABLE rangeTaxUnit (Range, TaxUnit);
-in 'Вкл.' (range, taxUnit) = DATA BOOLEAN (Range, TaxUnit);
-in (Range range, TaxUnit taxUnit) => isUnitsType(range) RESOLVE RIGHT;
+in 'On' (range, taxUnit) = DATA BOOLEAN (Range, TaxUnit);
+in (Range range, TaxUnit taxUnit) => isUnitsType (range) RESOLVE RIGHT;
 
-extra 'Дополнительная' = DATA BOOLEAN (Range); // Когда несколько расчетных ставок
-note 'Примечание' = DATA ISTRING[100] (Range);
+extra 'Additional' = DATA BOOLEAN (Range); // When several calculated rates
+note 'Note' = DATA ISTRING [100] (Range);
 
-range 'Шкала по налогу и субъекту' (tax, TaxUnit taxUnit) = GROUP AGGR Range range
-                                                                       WHERE in(range, taxUnit) AND Tax.taxVAT == tax(range) AND NOT extra(range) BY tax(range);
+range 'Scale by tax and subject' (tax, TaxUnit taxUnit) = GROUP AGGR Range range
+        WHERE in (range, taxUnit) AND Tax.taxVAT == tax (range) AND NOT extra (range) BY tax (range);
 
-rangeVAT 'Шкала субъекту' (TaxUnit taxUnit) = range (Tax.taxVAT, taxUnit);
+rangeVAT 'Scale to subject' (TaxUnit taxUnit) = range (Tax.taxVAT, taxUnit);
 
+// ---------------------------------- History of scale changes ----------- ---------------------------- //
 
-// ---------------------------------- История изменений шкалы --------------------------------------- //
+CLASS Rate 'History of scale changes';
+TABLE rate (Rate);
 
-CLASS Rate 'История изменений шкалы';
-TABLE rate(Rate);
-
-@defineCreated(Rate);
+@defineCreated (Rate);
 
 range = DATA Range (Rate);
-quantityRate 'Количество историй' (range) = GROUP SUM 1 IF Rate rate BY range(rate);
+quantityRate 'Number of stories' (range) = GROUP SUM 1 IF Rate rate BY range (rate);
 
-value 'Значение ставки' = DATA NUMERIC[10,5] (Rate) IN id NONULL;
-dateFrom 'Действует с' = DATA DATE (Rate) IN base INDEXED;
+value 'Rate value' = DATA NUMERIC [10,5] (Rate) IN id NONULL;
+dateFrom 'Effective since' = DATA DATE (Rate) IN base INDEXED;
 
-valueRate 'На дату' (range, DATE date) =
-                             GROUP LAST value(Rate rate)
-                                   ORDER dateFrom(rate), rate
-                                   WHERE dateFrom(rate) <= date
-                                   BY range(rate) COMPLEX CHARWIDTH 5;
+valueRate 'As of date' (range, DATE date) =
+                             GROUP LAST value (Rate rate)
+                                   ORDER dateFrom (rate), rate
+                                   WHERE dateFrom (rate) <= date
+                                   BY range (rate) COMPLEX CHARWIDTH 5;
 
-valueRate (Range r) = valueRate(r, currentDate()) MATERIALIZED;
+valueRate (Range r) = valueRate (r, currentDate ()) MATERIALIZED;
 
-INDEX range(Rate rate), dateFrom(rate), rate;
+INDEX range (Rate rate), dateFrom (rate), rate;
 
-dateFromRate 'Действует (с)' (range, DATE date) =
-                             GROUP LAST dateFrom(Rate rate)
-                                   ORDER dateFrom(rate), rate
-                                   WHERE dateFrom(rate) <= date
-                                   BY range(rate) COMPLEX;
+dateFromRate 'Valid (s)' (range, DATE date) =
+                             GROUP LAST dateFrom (Rate rate)
+                                   ORDER dateFrom (rate), rate
+                                   WHERE dateFrom (rate) <= date
+                                   BY range (rate) COMPLEX;
 
-valueCurrentRate 'Действующая ставка' (Range range) = valueRate(range, currentDate()) IN base MATERIALIZED;
+valueCurrentRate 'Current rate' (Range range) = valueRate (range, currentDate ()) IN base MATERIALIZED;
 
-dateFromCurrentRate 'Действует (с)' (Range range) = dateFromRate(range, currentDate()) IN base;
+dateFromCurrentRate 'Valid (s)' (Range range) = dateFromRate (range, currentDate ()) IN base;
 
-// для импорта
-valueCurrentVAT 'Шкала НДС по значению' (country, doubleValue) = GROUP MIN Range range BY country(range), valueCurrentRate (range);
+// for import
+valueCurrentVAT 'VAT scale by value' (country, doubleValue) = GROUP MIN Range range BY country (range), valueCurrentRate (range);
 
-valueCurrentVATDefault 'Шкала по значению' (NUMERIC[10,5] doubleValue) = valueCurrentVAT(defaultCountry(), doubleValue);
+valueCurrentVATDefault 'Scale by value' (NUMERIC [10,5] doubleValue) = valueCurrentVAT (defaultCountry (), doubleValue);
 
-valueVAT 'НДС, %' (TaxUnit taxUnit, DATE date) = valueRate(range(Tax.taxVAT, taxUnit), date);
-currentVATDate 'НДС, %' (TaxUnit taxUnit) = valueRate(range(Tax.taxVAT, taxUnit), currentDate());
+valueVAT 'VAT,%' (TaxUnit taxUnit, DATE date) = valueRate (range (Tax.taxVAT, taxUnit), date);
+currentVATDate 'VAT,%' (TaxUnit taxUnit) = valueRate (range (Tax.taxVAT, taxUnit), currentDate ());
 
-in = in(range(Rate rate), TaxUnit taxUnit);
+in = in (range (Rate rate), TaxUnit taxUnit);
 
-stringEqualsAll(BPSTRING[3] string) = string == BPSTRING[3]('Все');
-// --------------------------------------- Формы ------------------------------------- //
+stringEqualsAll (BPSTRING [3] string) = string == BPSTRING [3] ('All');
 
-FORM tax 'Налог'
-    OBJECTS           t = Tax PANEL
-    PROPERTIES(t)     staticCaption
+// --------------------------------------- Forms -------- ----------------------------- //
+
+FORM tax 'Tax'
+    OBJECTS t = Tax PANEL
+    PROPERTIES (t) staticCaption
 
     OBJECTS c = Country PANEL
-    PROPERTIES(c) SELECTOR    name
+    PROPERTIES (c) SELECTOR name
 
-    OBJECTS           ra = Range
-    PROPERTIES(ra)    number, nameRangeType, extra READONLYIF isCommonssType(ra), note, DELETE GRID
-    PROPERTIES(ra)    READONLY valueCurrentRate, dateFromCurrentRate    
-    PROPERTIES(t, c)  addNewRange DRAW ra
-    FILTERS           tax(ra) == t
-    FILTERS           country(ra) == c
+    OBJECTS ra = Range
+    PROPERTIES (ra) number, nameRangeType, extra READONLYIF isCommonssType (ra), note, DELETE GRID
+    PROPERTIES (ra) READONLY valueCurrentRate, dateFromCurrentRate
+    PROPERTIES (t, c) addNewRange DRAW ra
+    FILTERS tax (ra) == t
+    FILTERS country (ra) == c
 
-    OBJECTS           rt=Rate
-    PROPERTIES(rt)    value, dateFrom, createdTime, createdNameUser, NEW, DELETE GRID
-    FILTERS           range(rt) == ra
-    ORDERS dateFrom(rt)
+    OBJECTS rt = Rate
+    PROPERTIES (rt) value, dateFrom, createdTime, createdNameUser, NEW, DELETE GRID
+    FILTERS range (rt) == ra
+    ORDERS dateFrom (rt)
 
-    TREE treeTaxUnit  a=BPSTRING[3], ug = TaxUnitGroup PARENT parent(ug)
-    PROPERTIES READONLY VALUE(a), name(ug)
-    FILTERS           stringEqualsAll(a)
+    TREE treeTaxUnit a = BPSTRING [3], ug = TaxUnitGroup PARENT parent (ug)
+    PROPERTIES READONLY VALUE (a), name (ug)
+    FILTERS stringEqualsAll (a)
 
-    OBJECTS           u=TaxUnit
-    PROPERTIES(u) READONLY objectClassName, description
-    PROPERTIES(ra, u)      in SHOWIF isUnitsType(ra)
-    FILTERS           taxUnitGroup(u) == ug OR u IS TaxUnit AND NOT ug
+    OBJECTS u = TaxUnit
+    PROPERTIES (u) READONLY objectClassName, description
+    PROPERTIES (ra, u) in SHOWIF isUnitsType (ra)
+    FILTERS taxUnitGroup (u) == ug OR u IS TaxUnit AND NOT ug
 
     FILTERGROUP filters
-        FILTER 'Показывать магазины только для данного налога' in(ra, u) 'F10'
+        FILTER 'Show stores only for this tax' in (ra, u) 'F10'
 
     EDIT Tax OBJECT t
 ;
@@ -171,27 +171,27 @@ DESIGN tax {
         fill = 1;
         NEW row1 {
             type = CONTAINERH;
-            MOVE BOX(t) {
-                PANEL(t) {
+            MOVE BOX (t) {
+                PANEL (t) {
                     type = CONTAINERH;
                 }
             }
-            MOVE BOX(c);
+            MOVE BOX (c);
         }
         NEW firstCase {
             type = CONTAINERH;
             fill = 1;
-            MOVE BOX(ra);
-            MOVE BOX(rt);
+            MOVE BOX (ra);
+            MOVE BOX (rt);
         }
         NEW secondCase {
             type = CONTAINERH;
             fill = 1;
-            MOVE BOX(TREE treeTaxUnit) {
-                caption = 'Налоговые субъекты';
+            MOVE BOX (TREE treeTaxUnit) {
+                caption = 'Tax subjects';
                 fill = 1;
             }
-            MOVE BOX(u) {
+            MOVE BOX (u) {
                 fill = 3;
             }
         }
@@ -199,57 +199,57 @@ DESIGN tax {
     }
 }
 
-FORM taxes 'Налоги'
-    OBJECTS           t=Tax
-    PROPERTIES(t)     READONLY staticCaption
-    PROPERTIES(t)     NEWSESSION EDIT, DELETE 
+FORM taxes 'Taxes'
+    OBJECTS t = Tax
+    PROPERTIES (t) READONLY staticCaption
+    PROPERTIES (t) NEWSESSION EDIT, DELETE
 
-    OBJECTS           c=Country
-    PROPERTIES(c)     name
-    FILTERS           countRange(t, c)
+    OBJECTS c = Country
+    PROPERTIES (c) name
+    FILTERS countRange (t, c)
 
-    OBJECTS ra=Range
-    PROPERTIES(ra) READONLY number, valueCurrentRate, dateFromCurrentRate, nameRangeType, note, quantityRate
-    FILTERS                 tax(ra) == t,
-                            country(ra) == c
+    OBJECTS ra = Range
+    PROPERTIES (ra) READONLY number, valueCurrentRate, dateFromCurrentRate, nameRangeType, note, quantityRate
+    FILTERS tax (ra) == t,
+                            country (ra) == c
 
-    OBJECTS u=TaxUnit
-    PROPERTIES(u)     READONLY description
-    FILTERS                    in(ra, u)
+    OBJECTS u = TaxUnit
+    PROPERTIES (u) READONLY description
+    FILTERS in (ra, u)
 ;
 
 DESIGN taxes {
 
-    NEW topContainer{
+    NEW topContainer {
         type = SPLITV;
         fill = 1;
         NEW row1 {
             type = SPLITH;
             fill = 1;
-            MOVE BOX(t);
-            MOVE BOX(c);
+            MOVE BOX (t);
+            MOVE BOX (c);
         }
         NEW firstCase {
             type = SPLITV;
             fill = 1;
-            MOVE BOX(ra);
-            MOVE BOX(u);
+            MOVE BOX (ra);
+            MOVE BOX (u);
         }
     }
     MOVE TOOLBARBOX;
 }
 
-FORM range 'Шкала'
-    OBJECTS r=Range
-    PROPERTIES(r) READONLY number, nameTax, nameCountry, nameRangeType, note, valueCurrentRate, dateFromCurrentRate
+FORM range 'Scale'
+    OBJECTS r = Range
+    PROPERTIES (r) READONLY number, nameTax, nameCountry, nameRangeType, note, valueCurrentRate, dateFromCurrentRate
     LIST Range OBJECT r
 ;
 
-FORM rangeDialog 'Шкала'
+FORM rangeDialog 'Scale'
     OBJECTS c = Country PANEL
-    OBJECTS r=Range
-    PROPERTIES(r) READONLY number, nameTax, nameCountry, nameRangeType, note, valueCurrentRate, dateFromCurrentRate
-    FILTERS country(r) == c
+    OBJECTS r = Range
+    PROPERTIES (r) READONLY number, nameTax, nameCountry, nameRangeType, note, valueCurrentRate, dateFromCurrentRate
+    FILTERS country (r) == c
 ;
 
 NAVIGATOR {
@@ -258,309 +258,268 @@ NAVIGATOR {
     }
 }
 
+// ----------------------------------------- Macros for declaring taxes in documents - --------------------------- //
 
-// ----------------------------------------- Макросы по объявлению налогов в документах ---------------------------- //
+// ---------- with a prefix
+META defineDocumentDetailVATCustom (detail, countryProp, prefix, caption)
+    prefix ## VAT (detail) = DATA Range (### detail);
+    number ### prefix ## VAT 'VAT, number' ### caption (### detail detail) = number (prefix ## VAT (detail));
+    value ### prefix ## VAT 'VAT,%' ### caption (detail) = DATA NUMERIC [10,5] (### detail) CHARWIDTH 7;
 
-// ---------- с префиксом
-META defineDocumentDetailVATCustom(detail, countryProp, prefix, caption)
-    prefix##VAT(detail) = DATA Range (###detail);
-    number###prefix##VAT 'НДС, номер'###caption (###detail detail) = number(prefix##VAT(detail));
-    value###prefix##VAT 'НДС, %'###caption (detail) = DATA NUMERIC[10,5] (###detail) CHARWIDTH 7;
+    overValue ### prefix ## VAT 'VAT (for calculation),%' ### caption (detail) = ABSTRACT NUMERIC [10,5] (### detail);
+    calcValue ### prefix ## VAT 'VAT (overloaded),%' ### caption (### detail detail) = OVERRIDE overValue ### prefix ## VAT (detail), value ### prefix ## VAT ( detail);
 
-    overValue###prefix##VAT 'НДС (для расчета), %'###caption (detail) = ABSTRACT NUMERIC[10,5] (###detail);
-    calcValue###prefix##VAT 'НДС (перегруженный), %'###caption (###detail detail) = OVERRIDE overValue###prefix##VAT (detail), value###prefix##VAT (detail);
-
-    CONSTRAINT tax(prefix##VAT(###detail detail)) != Tax.taxVAT OR
-               country(prefix##VAT(detail)) != countryProp(detail)
-               CHECKED BY prefix##VAT[###detail]
-               MESSAGE 'ошибка: Шкала и страна строки должна соответствовать шкале и строке НДС: Tax'##caption;
+    CONSTRAINT tax (prefix ## VAT (### detail detail))! = Tax.taxVAT OR
+               country (prefix ## VAT (detail))! = countryProp (detail)
+               CHECKED BY prefix ## VAT [### detail]
+               MESSAGE 'error: The scale and country of the line must match the scale and the VAT line: Tax' ## caption;
 END
 
-META defineDocumentAbstractDetailVATCustom(detail, prefix, caption)
-    prefix##VAT(detail) = ABSTRACT Range (###detail) MATERIALIZED;
-    number###prefix##VAT 'НДС, номер'###caption (###detail detail) = number(prefix##VAT(detail));
-    value###prefix##VAT 'НДС, %'###caption (detail) = ABSTRACT NUMERIC[10,5] (###detail) CHARWIDTH 7 MATERIALIZED;
-    calcValue###prefix##VAT 'НДС (перегруженный), %'###caption (detail) = ABSTRACT NUMERIC[10,5] (###detail) MATERIALIZED;
+META defineDocumentAbstractDetailVATCustom (detail, prefix, caption)
+    prefix ## VAT (detail) = ABSTRACT Range (### detail) MATERIALIZED;
+    number ### prefix ## VAT 'VAT, number' ### caption (### detail detail) = number (prefix ## VAT (detail));
+    value ### prefix ## VAT 'VAT,%' ### caption (detail) = ABSTRACT NUMERIC [10,5] (### detail) CHARWIDTH 7 MATERIALIZED;
+    calcValue ### prefix ## VAT 'VAT (overloaded),%' ### caption (detail) = ABSTRACT NUMERIC [10,5] (### detail) MATERIALIZED;
 
 END
 
-META defineDocumentInterfaceDetailVATCustom(detail, countryProp, prefix, caption)
-    @defineDocumentAbstractDetailVATCustom(detail, prefix, caption);
-    @defineDocumentDetailVATCustom(user###detail, countryProp, prefix, caption);
-    prefix##VAT(User###detail detail) += prefix##VAT(detail);
-    value###prefix##VAT(User###detail detail) += value###prefix##VAT(detail);
-    calcValue###prefix##VAT(User###detail detail) += calcValue###prefix##VAT(detail);
+META defineDocumentInterfaceDetailVATCustom (detail, countryProp, prefix, caption)
+    @defineDocumentAbstractDetailVATCustom (detail, prefix, caption);
+    @defineDocumentDetailVATCustom (user ### detail, countryProp, prefix, caption);
+    prefix ## VAT (User ### detail detail) + = prefix ## VAT (detail);
+    value ### prefix ## VAT (User ### detail detail) + = value ### prefix ## VAT (detail);
+    calcValue ### prefix ## VAT (User ### detail detail) + = calcValue ### prefix ## VAT (detail);
 END
 
-META defineDocumentDetailVAT(object, countryProp, prefix, caption)
-    @defineDocumentDetailVATCustom(object##Detail, countryProp, prefix, caption);
+META defineDocumentDetailVAT (object, countryProp, prefix, caption)
+    @defineDocumentDetailVATCustom (object ## Detail, countryProp, prefix, caption);
 END
-META defineDocumentAbstractDetailVAT(object, prefix, caption)
-    @defineDocumentAbstractDetailVATCustom(object##Detail, prefix, caption);
+META defineDocumentAbstractDetailVAT (object, prefix, caption)
+    @defineDocumentAbstractDetailVATCustom (object ## Detail, prefix, caption);
 END
-META defineDocumentInterfaceDetailVAT(object, countryProp, prefix, caption)
-    @defineDocumentInterfaceDetailVATCustom(object##Detail, countryProp, prefix, caption);
+META defineDocumentInterfaceDetailVAT (object, countryProp, prefix, caption)
+    @defineDocumentInterfaceDetailVATCustom (object ## Detail, countryProp, prefix, caption);
 END
 
-// -------------------------- Галочка включен НДС или нет -------------------------------- //
+// -------------------------- Check mark is VAT included or not ----------------- --------------- //
 
 META defineDocumentDetailInclVATCustomPrefix (detail)
-    includeVAT 'Вкл. НДС' = DATA BOOLEAN (###detail);
+    includeVAT 'On VAT '= DATA BOOLEAN (### detail);
 END
 META defineDocumentAbstractDetailInclVATCustomPrefix (detail)
-    includeVAT 'Вкл. НДС' = ABSTRACT BOOLEAN (###detail) MATERIALIZED;
+    includeVAT 'On VAT '= ABSTRACT BOOLEAN (### detail) MATERIALIZED;
 END
 META defineDocumentInterfaceDetailInclVATCustomPrefix (detail)
-    @defineDocumentAbstractDetailInclVATCustomPrefix(detail);
-    @defineDocumentDetailInclVATCustomPrefix(user###detail);
-    includeVAT (User###detail detail) += includeVAT(detail);
+    @defineDocumentAbstractDetailInclVATCustomPrefix (detail);
+    @defineDocumentDetailInclVATCustomPrefix (user ### detail);
+    includeVAT (User ### detail detail) + = includeVAT (detail);
 END
 
 META defineDocumentDetailMPVATCustomPrefix (detail, prefix, prefixRange)
-    prefix##MVATPrice (###detail detail) =
-        IF includeVAT(detail)
+    prefix ## MVATPrice (### detail detail) =
+        IF includeVAT (detail)
             THEN
-                prefix##Price(detail) * 100.0 /(100.0 + calcValueVAT(detail))
+                prefix ## Price (detail) * 100.0 /(100.0 + calcValueVAT (detail))
             ELSE
-                prefix##Price(detail);
+                prefix ## Price (detail);
 
-    prefix##PVATPrice (###detail detail) =
-        IF includeVAT(detail)
+    prefix ## PVATPrice (### detail detail) =
+        IF includeVAT (detail)
             THEN
-                prefix##Price(detail)
+                prefix ## Price (detail)
             ELSE
-                prefix##Price(detail) * (100.0 + calcValueVAT(detail)) / 100.0;
+                prefix ## Price (detail) * (100.0 + calcValueVAT (detail)) / 100.0;
 
 END
 META defineDocumentInterfaceDetailMPVATCustomPrefix (detail, prefix, prefixRange)
     @defineDocumentDetailMPVATCustomPrefix (detail, prefix, prefixRange);
-    @defineDocumentDetailMPVATCustomPrefix (user###detail, prefix, prefixRange);
+    @defineDocumentDetailMPVATCustomPrefix (user ### detail, prefix, prefixRange);
 END
 
 
-// ---------- без префикса
-META defineDocumentDetailVATCustom(detail, countryProp)
-    @defineDocumentDetailVATCustom(detail, countryProp, , );
+// ---------- no prefix
+META defineDocumentDetailVATCustom (detail, countryProp)
+    @defineDocumentDetailVATCustom (detail, countryProp,,);
 END
 
-META defineDocumentAbstractDetailVATCustom(detail)
-    @defineDocumentAbstractDetailVATCustom(detail, , );
+META defineDocumentAbstractDetailVATCustom (detail)
+    @defineDocumentAbstractDetailVATCustom (detail,,);
 END
 
-META defineDocumentInterfaceDetailVATCustom(detail, countryProp)
-    @defineDocumentInterfaceDetailVATCustom(detail, countryProp, , );
+META defineDocumentInterfaceDetailVATCustom (detail, countryProp)
+    @defineDocumentInterfaceDetailVATCustom (detail, countryProp,,);
 END
 
-META defineDocumentDetailVAT(object, countryProp)
-    @defineDocumentDetailVATCustom(object##Detail, countryProp);
+META defineDocumentDetailVAT (object, countryProp)
+    @defineDocumentDetailVATCustom (object ## Detail, countryProp);
 END
-META defineDocumentAbstractDetailVAT(object)
-    @defineDocumentAbstractDetailVATCustom(object##Detail);
+META defineDocumentAbstractDetailVAT (object)
+    @defineDocumentAbstractDetailVATCustom (object ## Detail);
 END
-META defineDocumentInterfaceDetailVAT(object, countryProp)
-    @defineDocumentInterfaceDetailVATCustom(object##Detail, countryProp);
+META defineDocumentInterfaceDetailVAT (object, countryProp)
+    @defineDocumentInterfaceDetailVATCustom (object ## Detail, countryProp);
 END
 
 // ------------ derive
-META deriveDocumentDetailValueVATCustom(detail, prefix)
-    overDeriveValue###prefix##VAT (detail) = ABSTRACT NUMERIC[10,5] (###detail);  
-    overSetValue###prefix##VAT (detail) = ABSTRACT VALUE NUMERIC[10,5] (###detail);     
-    calcSetValue###prefix##VAT (###detail detail) = OVERRIDE overSetValue###prefix##VAT(detail),
-                                                              (IF prefix##VAT(detail) THEN
-                                                                valueRate(prefix##VAT(detail), date(detail))
-                                                              ELSE overDeriveValue###prefix##VAT (detail));
-    changedValue###prefix##VAT(detail) = ABSTRACT VALUE BOOLEAN (###detail);
-    WHEN LOCAL GOAFTER prefix##VAT[###detail]
-        (CHANGED(prefix##VAT(###detail detail)) OR (CHANGED (dateTime(detail)) AND NOT isPosted(detail)) OR changedValue###prefix##VAT(detail)) AND v == calcSetValue###prefix##VAT (detail) AND NOT CHANGED(value###prefix##VAT (detail)) DO {
-            value###prefix##VAT (detail) <- v;
+META deriveDocumentDetailValueVATCustom (detail, prefix)
+    overDeriveValue ### prefix ## VAT (detail) = ABSTRACT NUMERIC [10,5] (### detail);
+    overSetValue ### prefix ## VAT (detail) = ABSTRACT VALUE NUMERIC [10,5] (### detail);
+    calcSetValue ### prefix ## VAT (### detail detail) = OVERRIDE overSetValue ### prefix ## VAT (detail),
+                                                              (IF prefix ## VAT (detail) THEN
+                                                                valueRate (prefix ## VAT (detail), date (detail))
+                                                              ELSE overDeriveValue ### prefix ## VAT (detail));
+    changedValue ### prefix ## VAT (detail) = ABSTRACT VALUE BOOLEAN (### detail);
+    WHEN LOCAL GOAFTER prefix ## VAT [### detail]
+        (CHANGED (prefix ## VAT (### detail detail)) OR (CHANGED (dateTime (detail)) AND NOT isPosted (detail)) OR changedValue ### prefix ## VAT (detail)) AND v == calcSetValue # ## prefix ## VAT (detail) AND NOT CHANGED (value ### prefix ## VAT (detail)) DO {
+            value ### prefix ## VAT (detail) <- v;
         }
 END
-META deriveDocumentDetailValueVAT(object, prefix)
-    @deriveDocumentDetailValueVATCustom(object##Detail, prefix);
+META deriveDocumentDetailValueVAT (object, prefix)
+    @deriveDocumentDetailValueVATCustom (object ## Detail, prefix);
 END
-META deriveDocumentDetailValueVAT(object)
-    @deriveDocumentDetailValueVAT(object, );
-END
-
-// ---------- Суммы
-META defineDocumentDetailVATSumCustom(detail, prefix, currencyProp)
-    VATSum###detail 'Сумма НДС' (detail) = roundPriceCurrency((sum###detail(detail) * calcValueVAT###detail (detail) / 100), currencyProp###detail(detail));
-    prefix###sum###detail 'Сумма с НДС' (detail) = sum###detail(detail) (+) VATSum###detail(detail);
-END
-META defineDocumentInterfaceDetailVATSumCustom(detail, prefix, currencyProp)
-    @defineDocumentDetailVATSumCustom(detail, prefix, currencyProp);
-    @defineDocumentDetailVATSumCustom(user###detail, prefix, currencyProp);
+META deriveDocumentDetailValueVAT (object)
+    @deriveDocumentDetailValueVAT (object,);
 END
 
-META defineDocumentDetailVATSum(object, currencyProp)
-    @defineDocumentDetailVATSumCustom(object##Detail, object, currencyProp);
+// ---------- Amounts
+META defineDocumentDetailVATSumCustom (detail, prefix, currencyProp)
+    VATSum ### detail 'VAT amount' (detail) = roundPriceCurrency ((sum ### detail (detail) * calcValueVAT ### detail (detail) / 100), currencyProp ### detail (detail));
+    prefix ### sum ### detail 'VAT amount' (detail) = sum ### detail (detail) (+) VATSum ### detail (detail);
 END
-META defineDocumentInterfaceDetailVATSum(object, currencyProp)
-    @defineDocumentInterfaceDetailVATSumCustom(object##Detail, object, currencyProp);
-END
-
-META defineDocumentDetailVATSum(object)
-    @defineDocumentDetailVATSum(object, currency);
-END
-META defineDocumentInterfaceDetailVATSum(object)
-    @defineDocumentInterfaceDetailVATSum(object, currency);
+META defineDocumentInterfaceDetailVATSumCustom (detail, prefix, currencyProp)
+    @defineDocumentDetailVATSumCustom (detail, prefix, currencyProp);
+    @defineDocumentDetailVATSumCustom (user ### detail, prefix, currencyProp);
 END
 
-//-- Сумма НДС в detail
+META defineDocumentDetailVATSum (object, currencyProp)
+    @defineDocumentDetailVATSumCustom (object ## Detail, object, currencyProp);
+END
+META defineDocumentInterfaceDetailVATSum (object, currencyProp)
+    @defineDocumentInterfaceDetailVATSumCustom (object ## Detail, object, currencyProp);
+END
+
+META defineDocumentDetailVATSum (object)
+    @defineDocumentDetailVATSum (object, currency);
+END
+META defineDocumentInterfaceDetailVATSum (object)
+    @defineDocumentInterfaceDetailVATSum (object, currency);
+END
+
+// - VAT amount in detail
 META defineDocumentDetailVATDataSumCustom (detail, prefix)
-    VATSum 'Сумма НДС' (detail) = DATA NUMERIC[18,4] (###detail) CHARWIDTH 8;
-    prefix##Sum 'Сумма с НДС' (detail) = DATA NUMERIC[18,4] (###detail) CHARWIDTH 9;
+    VATSum 'VAT amount' (detail) = DATA NUMERIC [18,4] (### detail) CHARWIDTH 8;
+    prefix ## Sum 'Amount with VAT' (detail) = DATA NUMERIC [18,4] (### detail) CHARWIDTH 9;
 END
 META defineDocumentAbstractDetailVATDataSumCustom (detail, prefix)
-    VATSum 'Сумма НДС' (detail) = ABSTRACT NUMERIC[18,4] (###detail) MATERIALIZED CHARWIDTH 8;
-    prefix##Sum 'Сумма с НДС' (detail) = ABSTRACT NUMERIC[18,4] (###detail) MATERIALIZED CHARWIDTH 9;
+    VATSum 'VAT amount' (detail) = ABSTRACT NUMERIC [18,4] (### detail) MATERIALIZED CHARWIDTH 8;
+    prefix ## Sum 'Amount with VAT' (detail) = ABSTRACT NUMERIC [18,4] (### detail) MATERIALIZED CHARWIDTH 9;
 END
 META defineDocumentInterfaceDetailVATDataSumCustom (detail, prefix)
-    @defineDocumentAbstractDetailVATDataSumCustom(detail, prefix);
-    @defineDocumentDetailVATDataSumCustom(user###detail, prefix);
-    VATSum (User###detail detail) += VATSum(detail);
-    prefix##Sum (User###detail detail) += prefix##Sum (detail);
+    @defineDocumentAbstractDetailVATDataSumCustom (detail, prefix);
+    @defineDocumentDetailVATDataSumCustom (user ### detail, prefix);
+    VATSum (User ### detail detail) + = VATSum (detail);
+    prefix ## Sum (User ### detail detail) + = prefix ## Sum (detail);
 END
 
 META defineDocumentDetailVATDataSum (object, prefix)
-    @defineDocumentDetailVATDataSumCustom(object##Detail, prefix);
+    @defineDocumentDetailVATDataSumCustom (object ## Detail, prefix);
 END
 META defineDocumentAbstractDetailVATDataSum (object, prefix)
-    @defineDocumentAbstractDetailVATDataSumCustom(object##Detail, prefix);
+    @defineDocumentAbstractDetailVATDataSumCustom (object ## Detail, prefix);
 END
 META defineDocumentInterfaceDetailVATDataSum (object, prefix)
-    @defineDocumentInterfaceDetailVATDataSumCustom(object##Detail, prefix);
+    @defineDocumentInterfaceDetailVATDataSumCustom (object ## Detail, prefix);
 END
 
 // ------------ derive
-META deriveDocumentDetailVATDataSumCustom(detail, currencyProp)
-    overCalcVATSum = ABSTRACT NUMERIC[18,4] (###detail);
-    VATSum (###detail detail)  <- OVERRIDE overCalcVATSum(detail), round((sum(detail) * calcValueVAT (detail) / 100), currencyProp(detail))
-                    WHEN DO CHANGED(sum(detail)) OR CHANGED (valueVAT (detail)) OR CHANGED (currencyProp (detail));
+META deriveDocumentDetailVATDataSumCustom (detail, currencyProp)
+    overCalcVATSum = ABSTRACT NUMERIC [18,4] (### detail);
+    VATSum (### detail detail) <- OVERRIDE overCalcVATSum (detail), round ((sum (detail) * calcValueVAT (detail) / 100), currencyProp (detail))
+                    WHEN DO CHANGED (sum (detail)) OR CHANGED (valueVAT (detail)) OR CHANGED (currencyProp (detail));
 END
-META deriveDocumentDetailVATDataSum(object, currencyProp)
-    @deriveDocumentDetailVATDataSumCustom(object##Detail, currencyProp);
+META deriveDocumentDetailVATDataSum (object, currencyProp)
+    @deriveDocumentDetailVATDataSumCustom (object ## Detail, currencyProp);
 END
-META deriveDocumentDetailVATDataSum(object)
-    @deriveDocumentDetailVATDataSum(object, currency);
-END
-
-META deriveDocumentDetailVATPrefixSumCustom(detail, prefix)
-    overCalc###prefix##Sum = ABSTRACT NUMERIC[18,4] (###detail);
-    prefix##Sum (###detail detail) <- OVERRIDE overCalc###prefix##Sum(detail), (sum(detail) (+) VATSum(detail))
-        WHEN CHANGED(sum(detail)) OR CHANGED(VATSum(detail));
-END
-META deriveDocumentDetailVATPrefixSum(object, prefix)
-    @deriveDocumentDetailVATPrefixSumCustom(object##Detail, prefix);
+META deriveDocumentDetailVATDataSum (object)
+    @deriveDocumentDetailVATDataSum (object, currency);
 END
 
-META deriveDocumentDetailVATPrefixSum(object)
-    @deriveDocumentDetailVATPrefixSum(object, prefix);
+META deriveDocumentDetailVATPrefixSumCustom (detail, prefix)
+    overCalc ### prefix ## Sum = ABSTRACT NUMERIC [18,4] (### detail);
+    prefix ## Sum (### detail detail) <- OVERRIDE overCalc ### prefix ## Sum (detail), (sum (detail) (+) VATSum (detail))
+        WHEN CHANGED (sum (detail)) OR CHANGED (VATSum (detail));
+END
+META deriveDocumentDetailVATPrefixSum (object, prefix)
+    @deriveDocumentDetailVATPrefixSumCustom (object ## Detail, prefix);
 END
 
-// ----------------------------- Объявление действий для цен с НДС и без ------------------------- //
+META deriveDocumentDetailVATPrefixSum (object)
+    @deriveDocumentDetailVATPrefixSum (object, prefix);
+END
 
-// Изменение цены без НДС
+// ----------------------------- Declaring actions for prices with and without VAT ----------- -------------- //
+
+// Price change excluding VAT
 META defineDocumentDetailPriceVATOnChangeCustom (detail)
-    overChangePrice  ABSTRACT ( ###detail);
-    changePrice (###detail detail)  { 
-        INPUT n = NUMERIC[16,4] DO {
+    overChangePrice ABSTRACT (### detail);
+    changePrice (### detail detail) {
+        INPUT n = NUMERIC [16,4] DO {
             price (detail) <- n;
-            invoicePrice (detail) <- NUMERIC[16,4](round2(price(detail) * (100 + calcValueVAT(detail)) / 100));
-            overChangePrice(detail);
+            invoicePrice (detail) <- NUMERIC [16,4] (round2 (price (detail) * (100 + calcValueVAT (detail)) / 100));
+            overChangePrice (detail);
         }
     }
 END
 
 META defineDocumentDetailPriceVATOnChange (object)
-    @defineDocumentDetailPriceVATOnChangeCustom(object###Detail);
+    @defineDocumentDetailPriceVATOnChangeCustom (object ### Detail);
 END
 
-// Изменение щкалы НДС
+// Change the VAT rate
 META defineDocumentDetailNumberVATOnChangeCustom (detail, stockProp)
-    changeNumberVAT (###detail detail)  { 
-        DIALOG rangeDialog OBJECTS c = country###stockProp(detail), r = VAT(detail) INPUT NULL DO {
+    changeNumberVAT (### detail detail) {
+        DIALOG rangeDialog OBJECTS c = country ### stockProp (detail), r = VAT (detail) INPUT NULL DO {
             VAT (detail) <- r;
-            invoicePrice (detail) <- round2(price (detail) * (100 + calcValueVAT(detail))/100);
+            invoicePrice (detail) <- round2 (price (detail) * (100 + calcValueVAT (detail)) / 100);
         }
     }
 END
 
 META defineDocumentDetailNumberVATOnChange (object, stockProp)
-    @defineDocumentDetailNumberVATOnChangeCustom(object###Detail, stockProp);
+    @defineDocumentDetailNumberVATOnChangeCustom (object ### Detail, stockProp);
 END
 
-// Изменение ставки НДС
+// Change the VAT rate
 META defineDocumentDetailValueVATOnChangeCustom (detail)
-    changeValueVAT (###detail detail)  { 
-        INPUT n = NUMERIC[10,5] DO {
+    changeValueVAT (### detail detail) {
+        INPUT n = NUMERIC [10,5] DO {
             valueVAT (detail) <- n;
-            VAT(detail) <- valueCurrentVAT(countrySupplierStock(detail), n);
-            invoicePrice (detail) <- round2(price (detail) * (100 + n)/100);
+            VAT (detail) <- valueCurrentVAT (countrySupplierStock (detail), n);
+            invoicePrice (detail) <- round2 (price (detail) * (100 + n) / 100);
         }
     }
 END
 
 META defineDocumentDetailValueVATOnChange (object)
-    @defineDocumentDetailValueVATOnChangeCustom(object###Detail);
+    @defineDocumentDetailValueVATOnChangeCustom (object ### Detail);
 END
 
-// Изменение цены с НДС
+// Price change with VAT
 META defineDocumentDetailInvoicePriceVATOnChangeCustom (detail)
-    skipChangeInvoicePrice = ABSTRACT BOOLEAN (###detail);
-    changeInvoicePrice (###detail detail)  { 
-        INPUT n = NUMERIC[16,4] DO {
+    skipChangeInvoicePrice = ABSTRACT BOOLEAN (### detail);
+    changeInvoicePrice (### detail detail) {
+        INPUT n = NUMERIC [16,4] DO {
             invoicePrice (detail) <- n;
-            price (detail) <- round2(invoicePrice (detail) * 100/(100 + calcValueVAT(detail))) WHERE NOT skipChangeInvoicePrice(detail);
+            price (detail) <- round2 (invoicePrice (detail) * 100 / (100 + calcValueVAT (detail))) WHERE NOT skipChangeInvoicePrice (detail);
         }
     }
 END
 
 META defineDocumentDetailInvoicePriceVATOnChange (object)
-    @defineDocumentDetailInvoicePriceVATOnChangeCustom(object###Detail);
+    @defineDocumentDetailInvoicePriceVATOnChangeCustom (object ### Detail);
 END
 
-//-- НДС - Розничный
 
-META defineDocumentDetailVATDataSumCustomPrefix (detail, prefix, caption)
-    prefix##VATSum 'Сумма НДС'###caption = DATA NUMERIC[18,4] (###detail) CHARWIDTH 8;
-END
-META defineDocumentAbstractDetailVATDataSumCustomPrefix (detail, prefix, caption)
-    prefix##VATSum 'Сумма НДС'###caption = ABSTRACT NUMERIC[18,4] (###detail) CHARWIDTH 8 MATERIALIZED;
-END
-META defineDocumentInterfaceDetailVATDataSumCustomPrefix (detail, prefix, caption)
-    @defineDocumentAbstractDetailVATDataSumCustomPrefix(detail, prefix, caption);
-    @defineDocumentDetailVATDataSumCustomPrefix(user###detail, prefix, caption);
-    prefix##VATSum (User###detail detail) += prefix##VATSum(detail);
-END
-META defineDocumentInterfaceDetailVATDataSumPrefix (object, prefix, caption)
-    @defineDocumentInterfaceDetailVATDataSumCustomPrefix(object##Detail, prefix, caption);
-END
-META defineDocumentInterfaceDetailVATDataSumPrefix (object, prefix)
-    @defineDocumentInterfaceDetailVATDataSumPrefix(object, prefix, );
-END
-
-META deriveDocumentDetailReverseVATSumCustomPrefix(detail, prefixA, prefixB, currencyProp)
-    prefixA##VATSum (###detail detail)  <- round([ X*Y/(100+Y)](prefixB###sum(detail), calcValue###prefixA##VAT(detail)), currencyProp(detail))
-                    WHEN CHANGED(prefixB###sum(detail)) OR CHANGED (calcValue###prefixA##VAT(detail)) OR CHANGED (currencyProp(detail));
-
-END
-META deriveDocumentDetailReverseVATSumPrefix(object, prefixA, prefixB, currencyProp)
-    @deriveDocumentDetailReverseVATSumCustomPrefix(object##Detail, prefixA, prefixB, currencyProp);
-END
-META deriveDocumentDetailReverseVATSumPrefix(object, prefixA, prefixB)
-    @deriveDocumentDetailReverseVATSumPrefix(object, prefixA, prefixB, currency);
-END
-META deriveDocumentDetailReverseVATSumRoundCustomPrefix(detail, prefixA, prefixB, currencyProp, roundProp)
-    prefixA##VATSum (###detail detail)  <- NUMERIC[18,4](Utils.round([ X*Y/(100+Y)](prefixA##Sum(detail), calcValue###prefixA##VAT(detail)), roundProp(detail)))
-                    WHEN CHANGED(prefixA##Sum(detail)) OR CHANGED (calcValue###prefixA##VAT(detail)) OR CHANGED (currencyProp(detail));
-END
-META deriveDocumentDetailReverseVATSumRoundPrefix(object, prefixA, prefixB, currencyProp,roundProp)
-    @deriveDocumentDetailReverseVATSumRoundCustomPrefix(object##Detail, prefixA, prefixB, currencyProp,roundProp);
-END
-META deriveDocumentDetailReverseVATSumRoundPrefix(object, prefixA, prefixB, roundProp)
-    @deriveDocumentDetailReverseVATSumRoundPrefix(object, prefixA, prefixB, currency, roundProp);
-END
 //-- Сумма НДС в документе
 META defineDocumentHeaderVATSum (object, detail, prefix)
     VATSum###detail 'Сумма НДС' (object) = GROUP SUM VATSum(###detail idetail) BY object(idetail) CHARWIDTH 9 IN documentSum;
@@ -581,30 +540,70 @@ END
 META defineDocumentHeaderVATSum(object)
     @defineDocumentHeaderVATSum(object, object##Detail, );
 END
+// - VAT - Retail
 
-// ------------------------------------------------------- Стандартные данные ----------------------------------- //
+META defineDocumentDetailVATDataSumCustomPrefix (detail, prefix, caption)
+    prefix ## VATSum 'VAT amount' ### caption = DATA NUMERIC [18,4] (### detail) CHARWIDTH 8;
+END
+META defineDocumentAbstractDetailVATDataSumCustomPrefix (detail, prefix, caption)
+    prefix ## VATSum 'VAT amount' ### caption = ABSTRACT NUMERIC [18,4] (### detail) CHARWIDTH 8 MATERIALIZED;
+END
+META defineDocumentInterfaceDetailVATDataSumCustomPrefix (detail, prefix, caption)
+    @defineDocumentAbstractDetailVATDataSumCustomPrefix (detail, prefix, caption);
+    @defineDocumentDetailVATDataSumCustomPrefix (user ### detail, prefix, caption);
+    prefix ## VATSum (User ### detail detail) + = prefix ## VATSum (detail);
+END
+META defineDocumentInterfaceDetailVATDataSumPrefix (object, prefix, caption)
+    @defineDocumentInterfaceDetailVATDataSumCustomPrefix (object ## Detail, prefix, caption);
+END
+META defineDocumentInterfaceDetailVATDataSumPrefix (object, prefix)
+    @defineDocumentInterfaceDetailVATDataSumPrefix (object, prefix,);
+END
 
-loadDefaultVAT 'Добавить значение НДС'(BPSTRING[3] idCountry, INTEGER number, NUMERIC[10,5] value)  { 
-    NEW rn = Range {
-       rangeType(rn) <- RangeType.common;
-       tax(rn) <- Tax.taxVAT;
-       country(rn) <- country(idCountry);
-       number(rn) <- number;
-       NEW ra = Rate {
-          range(ra) <- rn;
-          value(ra) <- value;
-          dateFrom(ra) <- 2001_01_01;
-       };
-    };
+META deriveDocumentDetailReverseVATSumCustomPrefix (detail, prefixA, prefixB, currencyProp)
+    prefixA ## VATSum (### detail detail) <- round ([X * Y / (100 + Y)] (prefixB ### sum (detail), calcValue ### prefixA ## VAT (detail)), currencyProp (detail))
+                    WHEN CHANGED (prefixB ### sum (detail)) OR CHANGED (calcValue ### prefixA ## VAT (detail)) OR CHANGED (currencyProp (detail));
+
+END
+META deriveDocumentDetailReverseVATSumPrefix (object, prefixA, prefixB, currencyProp)
+    @deriveDocumentDetailReverseVATSumCustomPrefix (object ## Detail, prefixA, prefixB, currencyProp);
+END
+META deriveDocumentDetailReverseVATSumPrefix (object, prefixA, prefixB)
+    @deriveDocumentDetailReverseVATSumPrefix (object, prefixA, prefixB, currency);
+END
+META deriveDocumentDetailReverseVATSumRoundCustomPrefix (detail, prefixA, prefixB, currencyProp, roundProp)
+    prefixA ## VATSum (### detail detail) <- NUMERIC [18,4] (Utils.round ([X * Y / (100 + Y)] (prefixA ## Sum (detail), calcValue ### prefixA # #VAT (detail)), roundProp (detail)))
+                    WHEN CHANGED (prefixA ## Sum (detail)) OR CHANGED (calcValue ### prefixA ## VAT (detail)) OR CHANGED (currencyProp (detail));
+END
+META deriveDocumentDetailReverseVATSumRoundPrefix (object, prefixA, prefixB, currencyProp, roundProp)
+    @deriveDocumentDetailReverseVATSumRoundCustomPrefix (object ## Detail, prefixA, prefixB, currencyProp, roundProp);
+END
+META deriveDocumentDetailReverseVATSumRoundPrefix (object, prefixA, prefixB, roundProp)
+    @deriveDocumentDetailReverseVATSumRoundPrefix (object, prefixA, prefixB, currency, roundProp);
+END
+// ------------------------------------------------ ------- Standard data ----------------------------------- //
+
+loadDefaultVAT 'Add VAT value' (BPSTRING [3] idCountry, INTEGER number, NUMERIC [10,5] value) {
+     NEW rn = Range {
+        rangeType (rn) <- RangeType.common;
+        tax (rn) <- Tax.taxVAT;
+        country (rn) <- country (idCountry);
+        number (rn) <- number;
+        NEW ra = Rate {
+           range (ra) <- rn;
+           value (ra) <- value;
+           dateFrom (ra) <- 2001_01_01;
+        };
+     };
 };
 
-loadDefaultVATs 'Загрузить стандартные НДС'  ABSTRACT LIST ( ) IN loadDefault;
+loadDefaultVATs 'Load standard VATs' ABSTRACT LIST () IN loadDefault;
 
 EXTEND FORM defaultData
-    PROPERTIES() loadDefaultVATs
+     PROPERTIES () loadDefaultVATs
 ;
 DESIGN defaultData {
-    commons {
-        MOVE PROPERTY(loadDefaultVATs());
-    }
+     commons {
+         MOVE PROPERTY (loadDefaultVATs ());
+     }
 }
