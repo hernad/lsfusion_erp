@@ -2,11 +2,11 @@ MODULE DimensionBatch;
 
 REQUIRE Dimension, SkuLedger;
 
-EXTEND CLASS Batch : Dimension;
+EXTEND CLASS Batch: Dimension;
 EXTEND CLASS DimensionType {
-    batch 'Партия'
+     batch 'Batch'
 }
-name (Batch dimension) += name(dimension);
-dimensionType (Batch dimension) += WHEN dimension IS Batch THEN DimensionType.batch;
+name (Batch dimension) + = name (dimension);
+dimensionType (Batch dimension) + = WHEN dimension IS Batch THEN DimensionType.batch;
 
-id(Batch dimension) += ISTRING[20](id(dimension));
+id (Batch dimension) + = ISTRING [20] (id (dimension));
