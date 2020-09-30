@@ -2,22 +2,21 @@ MODULE DimensionBank;
 
 REQUIRE Dimension, Bank;
 
-//-- Bank
-EXTEND CLASS Bank : Dimension;
+// - Bank
+EXTEND CLASS Bank: Dimension;
 EXTEND CLASS DimensionType {
-    bank 'Банк'
+     bank 'Bank'
 }
-name (Bank dimension) += name(dimension) IF dimension IS Bank;
-dimensionType (Bank dimension) += WHEN dimension IS Bank THEN DimensionType.bank;
-id(Bank dimension) += ISTRING[100](code(dimension)) IF dimension IS Bank;
+name (Bank dimension) + = name (dimension) IF dimension IS Bank;
+dimensionType (Bank dimension) + = WHEN dimension IS Bank THEN DimensionType.bank;
+id (Bank dimension) + = ISTRING [100] (code (dimension)) IF dimension IS Bank;
 
-//-- Account
-EXTEND CLASS Bank.Account : Dimension;
+// - Account
+EXTEND CLASS Bank.Account: Dimension;
 EXTEND CLASS DimensionType {
-    account 'Счет'
+     account 'Account'
 }
-name (Bank.Account dimension) += number(dimension);
-dimensionType (Bank.Account dimension) += WHEN dimension IS Bank.Account THEN DimensionType.account;
+name (Bank.Account dimension) + = number (dimension);
+dimensionType (Bank.Account dimension) + = WHEN dimension IS Bank.Account THEN DimensionType.account;
 
-id(Bank.Account dimension) += ISTRING[100](number(dimension)) IF dimension IS Bank.Account;
-
+id (Bank.Account dimension) + = ISTRING [100] (number (dimension)) IF dimension IS Bank.Account;
