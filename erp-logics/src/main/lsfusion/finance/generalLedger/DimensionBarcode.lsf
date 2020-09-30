@@ -2,11 +2,11 @@ MODULE DimensionBarcode;
 
 REQUIRE Dimension, Barcode;
 
-EXTEND CLASS Barcode : Dimension;
+EXTEND CLASS Barcode: Dimension;
 EXTEND CLASS DimensionType {
-    barcode 'Штрих-код'
+     barcode 'Barcode'
 }
-name (Barcode dimension) += id(dimension);
-dimensionType (Barcode dimension) += WHEN dimension IS Barcode THEN DimensionType.barcode;
+name (Barcode dimension) + = id (dimension);
+dimensionType (Barcode dimension) + = WHEN dimension IS Barcode THEN DimensionType.barcode;
 
-id(Barcode dimension) += ISTRING[20](id(dimension));
+id (Barcode dimension) + = ISTRING [20] (id (dimension));
