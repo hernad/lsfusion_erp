@@ -11,86 +11,86 @@ REQUIRE System,
 
 PRIORITY Utils;
 
-//------------------------- План счетов -------------------------------//
+// ------------------------- Chart of accounts --------------------- ---------- //
 
-CLASS GLAccountType 'План счетов';
-TABLE GLAccountType(GLAccountType);
+CLASS GLAccountType 'Chart of Accounts';
+TABLE GLAccountType (GLAccountType);
 
-name 'Наименование' = DATA ISTRING[150](GLAccountType);
+name 'Name' = DATA ISTRING [150] (GLAccountType);
 
 currency = DATA Currency (GLAccountType);
-nameCurrency 'Валюта' (GLAccountType GLAccountType)= name(currency(GLAccountType));
-id 'Идентификатор' = DATA STRING[20] (GLAccountType) CHARWIDTH 15;
+nameCurrency 'Currency' (GLAccountType GLAccountType) = name (currency (GLAccountType));
+id 'Identifier' = DATA STRING [20] (GLAccountType) CHARWIDTH 15;
 
 GLAccountTypeIdGLAccountType (string1) = GROUP AGGR GLAccountType GLAccountType WHERE GLAccountType IS GLAccountType
-    BY id(GLAccountType);
+    BY id (GLAccountType);
 
-FORM GLAccountType 'План счетов'
+FORM GLAccountType 'Chart of Accounts'
     OBJECTS g = GLAccountType PANEL
-    PROPERTIES(g) name, id, nameCurrency
+    PROPERTIES (g) name, id, nameCurrency
     EDIT GLAccountType OBJECT g
 ;
 
-FORM GLAccountTypes 'Планы счетов'
+FORM GLAccountTypes 'Charts of Accounts'
     OBJECTS g = GLAccountType
-    PROPERTIES(g) READONLY name, id, nameCurrency
-    PROPERTIES(g) NEWSESSION NEW, EDIT, DELETE 
+    PROPERTIES (g) READONLY name, id, nameCurrency
+    PROPERTIES (g) NEWSESSION NEW, EDIT, DELETE
     LIST GLAccountType OBJECT g
 ;
 
-//-------------------------- Счета -------------------------//
+// -------------------------- Accounts --------------------- ---- //
 
-CLASS GLAccount 'Счет';
-TABLE GLAccount(GLAccount);
+CLASS GLAccount 'Account';
+TABLE GLAccount (GLAccount);
 
-name 'Наименование' = DATA STRING[255] (GLAccount) CHARWIDTH 40;
+name 'Name' = DATA STRING [255] (GLAccount) CHARWIDTH 40;
 GLAccountType = DATA GLAccountType (GLAccount) AUTOSET;
-nameGLAccountType 'План счетов' (GLAccount GLAccount)= name(GLAccountType(GLAccount));
-nameCurrency 'Валюта' (GLAccount GLAccount) = nameCurrency(GLAccountType(GLAccount));
+nameGLAccountType 'Chart of Accounts' (GLAccount GLAccount) = name (GLAccountType (GLAccount));
+nameCurrency 'Currency' (GLAccount GLAccount) = nameCurrency (GLAccountType (GLAccount));
 
-id 'Идентификатор' = DATA STRING[20] (GLAccount) CHARWIDTH 5;
+id 'Identifier' = DATA STRING [20] (GLAccount) CHARWIDTH 5;
 
-TABLE GLAccountGLAccount(GLAccount, GLAccount);
-@defineHierarchy(GLAccount);
+TABLE GLAccountGLAccount (GLAccount, GLAccount);
+@defineHierarchy (GLAccount);
 
-canonicalId 'Канонический код' (GLAccount GLAccount) = STRING[255](
-                           (GROUP CONCAT id(GLAccount parent), ' / ' ORDER DESC level(GLAccount, parent)))
+canonicalId 'Canonical code' (GLAccount GLAccount) = STRING [255] (
+                           (GROUP CONCAT id (GLAccount parent), '/' ORDER DESC level (GLAccount, parent)))
                            CHARWIDTH 50 MATERIALIZED;
-canonicalNames 'Каноническое имя' (GLAccount GLAccount) = STRING[255](
-                           (GROUP CONCAT name(GLAccount parent), ' / ' ORDER DESC level(GLAccount, parent)))
+canonicalNames 'Canonical Name' (GLAccount GLAccount) = STRING [255] (
+                           (GROUP CONCAT name (GLAccount parent), '/' ORDER DESC level (GLAccount, parent)))
                            CHARWIDTH 50 MATERIALIZED;
 
-nameAccountParent 'Родительский объект' (GLAccount GLAccount)= name(parent(GLAccount));
-idGLAccountParent 'Родительский объект' (GLAccount GLAccount)= id(parent(GLAccount));
+nameAccountParent 'Parent' (GLAccount GLAccount) = name (parent (GLAccount));
+idGLAccountParent 'Parent' (GLAccount GLAccount) = id (parent (GLAccount));
 
-CONSTRAINT GLAccountType(parent(GLAccount GLAccount)) != GLAccountType(GLAccount)
-           CHECKED BY parent[GLAccount] MESSAGE 'План счетов родительской объекта должна совпадать с планом счетов объекта';
+CONSTRAINT GLAccountType (parent (GLAccount GLAccount))! = GLAccountType (GLAccount)
+           CHECKED BY parent [GLAccount] MESSAGE 'The chart of accounts of the parent object must match the chart of accounts of the object';
 
 GLAccountIdTypeIdGLAccount (string1, string2) = GROUP AGGR GLAccount GLAccount WHERE GLAccount IS GLAccount
-    BY id(GLAccountType(GLAccount)), id(GLAccount);
+    BY id (GLAccountType (GLAccount)), id (GLAccount);
 
-FORM GLAccount 'Счет'
-    OBJECTS g=GLAccount PANEL
-    PROPERTIES(g) nameGLAccountType, name, id, idGLAccountParent
+FORM GLAccount 'Account'
+    OBJECTS g = GLAccount PANEL
+    PROPERTIES (g) nameGLAccountType, name, id, idGLAccountParent
     EDIT GLAccount OBJECT g
 ;
 
-FORM GLAccounts 'Счета'
+FORM GLAccounts 'Accounts'
     OBJECTS t = GLAccountType PANEL
-    PROPERTIES(t) SELECTOR name
+    PROPERTIES (t) SELECTOR name
 
     OBJECTS dates = (dFrom = DATE, dTo = DATE) PANEL
-    PROPERTIES valFrom = VALUE(dFrom), valTo = VALUE(dTo)
+    PROPERTIES valFrom = VALUE (dFrom), valTo = VALUE (dTo)
 
     OBJECTS l = LegalEntity PANEL
-    PROPERTIES(l) SELECTOR name
+    PROPERTIES (l) SELECTOR name
 
-    TREE treeGroups g=GLAccount PARENT parent(g)
-    PROPERTIES(g) READONLY name, id
-    PROPERTIES(g) READONLY canonicalId
-    PROPERTIES(g) NEWSESSION NEW, EDIT, deletea=DELETE 
-    FILTERS GLAccountType(g) == t
-    ORDERS canonicalId(g)
+    TREE treeGroups g = GLAccount PARENT parent (g)
+    PROPERTIES (g) READONLY name, id
+    PROPERTIES (g) READONLY canonicalId
+    PROPERTIES (g) NEWSESSION NEW, EDIT, deletea = DELETE
+    FILTERS GLAccountType (g) == t
+    ORDERS canonicalId (g)
 ;
 
 DESIGN GLAccounts {
@@ -104,13 +104,13 @@ DESIGN GLAccounts {
                 fill = 1;
                 NEW row1 {
                     type = CONTAINERH;
-                    MOVE BOX(t);
-                    MOVE BOX(l);
+                    MOVE BOX (t);
+                    MOVE BOX (l);
                 }
-                MOVE BOX(dates) {
+                MOVE BOX (dates) {
                     type = CONTAINERH;
                 }
-                MOVE BOX(TREE treeGroups){ caption = 'Счет';}
+                MOVE BOX (TREE treeGroups) {caption = 'Account';}
             }
             NEW wor {
                 type = TABBED;
@@ -121,73 +121,73 @@ DESIGN GLAccounts {
     }
 }
 
-FORM GLAccountDialog 'Счета'
+FORM GLAccountDialog 'Accounts'
     OBJECTS t = GLAccountType PANEL
-    PROPERTIES(t) SELECTOR name
+    PROPERTIES (t) SELECTOR name
 
-    TREE treeGroups g=GLAccount PARENT parent(g)
-    PROPERTIES(g) READONLY name, id
-    PROPERTIES(g) READONLY canonicalId
-    PROPERTIES(g) NEWSESSION NEW, EDIT, deletea=DELETE 
-    FILTERS GLAccountType(g) == t
-    ORDERS canonicalId(g)
+    TREE treeGroups g = GLAccount PARENT parent (g)
+    PROPERTIES (g) READONLY name, id
+    PROPERTIES (g) READONLY canonicalId
+    PROPERTIES (g) NEWSESSION NEW, EDIT, deletea = DELETE
+    FILTERS GLAccountType (g) == t
+    ORDERS canonicalId (g)
     LIST GLAccount OBJECT g
 ;
 
-overCopy  ABSTRACT LIST ( GLAccount, GLAccount);
-copy 'Копировать'(GLAccountType GLAccountType)  { 
-	NEWSESSION {
-	    LOCAL mapping = GLAccount (GLAccount);
-	
-	    NEW t = GLAccountType {
-	        currency(t) <- currency(GLAccountType);
-	
-	        FOR GLAccountType(GLAccount GLAccount) == GLAccountType DO {
-	            NEW d=GLAccount {
-	                GLAccountType(d) <- t;
-	                name(d) <- name(GLAccount);
-	                id(d) <- id(GLAccount);
-	                parent(d) <- mapping(parent(GLAccount));
-	                mapping(GLAccount) <- d;
-	                EXEC overCopy(GLAccount, d);
-	            }
-	        }
-	
-	        SHOW GLAccountType OBJECTS g = t DOCKED;
-	    }
-	}
+overCopy ABSTRACT LIST (GLAccount, GLAccount);
+copy 'Copy' (GLAccountType GLAccountType) {
+NEWSESSION {
+LOCAL mapping = GLAccount (GLAccount);
+
+NEW t = GLAccountType {
+currency (t) <- currency (GLAccountType);
+
+FOR GLAccountType (GLAccount GLAccount) == GLAccountType DO {
+NEW d = GLAccount {
+GLAccountType (d) <- t;
+name (d) <- name (GLAccount);
+id (d) <- id (GLAccount);
+parent (d) <- mapping (parent (GLAccount));
+mapping (GLAccount) <- d;
+EXEC overCopy (GLAccount, d);
+}
+}
+
+SHOW GLAccountType OBJECTS g = t DOCKED;
+}
+}
 } TOOLBAR;
 
 EXTEND FORM GLAccountTypes
-    PROPERTIES(g) copy
+    PROPERTIES (g) copy
 ;
 
 NAVIGATOR {
     financeNavigator {
-        NEW FOLDER accountType 'Бухгалтерский учет' {
+        NEW FOLDER accountType 'Accounting' {
             NEW GLAccountTypes;
             NEW GLAccounts;
         }
     }
 }
 
-// ----------------------------------- Стандартные данные ----------------------------------- //
+// ----------------------------------- Standard data ----------- ------------------------ //
 
-loadDefaultGLAccountType 'Добавить значение плана счетов'(ISTRING[150] iname, STRING[20] isid, BPSTRING[3] isidCurrency)  { 
-    NEW t = GLAccountType {
-        name(t) <- iname;
-        id (t) <- isid;
-        currency(t) <- currencyShortName(isidCurrency);
-    }
+loadDefaultGLAccountType 'Add Chart of Accounts value' (ISTRING [150] iname, STRING [20] isid, BPSTRING [3] isidCurrency) {
+     NEW t = GLAccountType {
+         name (t) <- iname;
+         id (t) <- isid;
+         currency (t) <- currencyShortName (isidCurrency);
+     }
 }
-loadDefaultGLAccount 'Добавить значение счета'(STRING[255] iname, STRING[20] isid, STRING[20] sidType, STRING[20] sidParent)  { 
-    NEW g = GLAccount {
-        name(g) <- iname;
-        id(g) <- isid;
-        GLAccountType(g) <- GLAccountTypeIdGLAccountType(sidType);
-        parent (g) <- GLAccountIdTypeIdGLAccount(sidType, sidParent);
-    }
+loadDefaultGLAccount 'Add account value' (STRING [255] iname, STRING [20] isid, STRING [20] sidType, STRING [20] sidParent) {
+     NEW g = GLAccount {
+         name (g) <- iname;
+         id (g) <- isid;
+         GLAccountType (g) <- GLAccountTypeIdGLAccountType (sidType);
+         parent (g) <- GLAccountIdTypeIdGLAccount (sidType, sidParent);
+     }
 }
-loadDefaultGLAccounts 'Загрузить стандартный план счетов и счета' ()  ABSTRACT LIST ( )  IN loadDefault;
+loadDefaultGLAccounts 'Load standard chart of accounts and accounts' () ABSTRACT LIST () IN loadDefault;
 
-@implementLoadDefaultData(loadDefaultGLAccounts);
+@implementLoadDefaultData (loadDefaultGLAccounts);
