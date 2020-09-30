@@ -4,22 +4,22 @@ REQUIRE SkuLedger, StockTax, TaxItem;
 
 NAMESPACE Stock;
 
-VAT 'НДС партии, шкала' = ABSTRACT Range (Batch);
-numberVAT 'НДС партии, шкала' = number(VAT(Batch batch));
-valueVAT 'НДС партии, %' = ABSTRACT NUMERIC[10,5](Batch) MATERIALIZED;
-prevValueVAT(Batch b) = PREV(valueVAT(b));
+VAT 'VAT batch, scale' = ABSTRACT Range (Batch);
+numberVAT 'VAT batch, scale' = number (VAT (Batch batch));
+valueVAT 'Batch VAT,%' = ABSTRACT NUMERIC [10,5] (Batch) MATERIALIZED;
+prevValueVAT (Batch b) = PREV (valueVAT (b));
 
-lastValueVAT(s, Stock st, DATETIME dt) = GROUP LAST valueVAT(Batch b)
-                                                                                   ORDER dateTime(b), b
-                                                                                   WHERE valueVAT(b) AND dateTime(b) < dt
-                                                                                   BY skuLedger(b, st) COMPLEX;
-prevLastValueVAT(Sku s, Stock st, DATETIME dt) = PREV(lastValueVAT(s, st, dt));
+lastValueVAT (s, Stock st, DATETIME dt) = GROUP LAST valueVAT (Batch b)
+                                                                                   ORDER dateTime (b), b
+                                                                                   WHERE valueVAT (b) AND dateTime (b) <dt
+                                                                                   BY skuLedger (b, st) COMPLEX;
+prevLastValueVAT (Sku s, Stock st, DATETIME dt) = PREV (lastValueVAT (s, st, dt));
                                                                                    
-valueVAT 'НДС, %' (Stock stock, Batch batch, DATE date)= OVERRIDE valueVAT(batch) IF stock IS Stock AND date IS DATE, valueRate(VAT(sku(batch), stock), date);
-currentValueVAT 'НДС, %' (Stock stock, Batch batch) = valueVAT(stock, batch, currentDate());
-currentValueVAT 'НДС, %' (Batch batch) = currentValueVAT(stock(batch), batch);
+valueVAT 'VAT,%' (Stock stock, Batch batch, DATE date) = OVERRIDE valueVAT (batch) IF stock IS Stock AND date IS DATE, valueRate (VAT (sku (batch), stock), date);
+currentValueVAT 'VAT,%' (Stock stock, Batch batch) = valueVAT (stock, batch, currentDate ());
+currentValueVAT 'VAT,%' (Batch batch) = currentValueVAT (stock (batch), batch);
                                                                                    
                                                                                    
-EXTEND FORM batches 
-    PROPERTIES (bt) READONLY currentValueVAT AFTER nameStock(bt), numberVAT, valueVAT 
-;    
+EXTEND FORM batches
+    PROPERTIES (bt) READONLY currentValueVAT AFTER nameStock (bt), numberVAT, valueVAT
+;
