@@ -2,11 +2,11 @@ MODULE DimensionLegalEntity;
 
 REQUIRE Dimension, LegalEntity;
 
-EXTEND CLASS LegalEntity : Dimension;
+EXTEND CLASS LegalEntity: Dimension;
 EXTEND CLASS DimensionType {
-    organization 'Организация'
+     organization 'Organization'
 }
-name[Dimension] (LegalEntity dimension) += name(dimension) IF dimension IS LegalEntity;
-dimensionType (LegalEntity dimension) += WHEN dimension IS LegalEntity THEN DimensionType.organization;
+name [Dimension] (LegalEntity dimension) + = name (dimension) IF dimension IS LegalEntity;
+dimensionType (LegalEntity dimension) + = WHEN dimension IS LegalEntity THEN DimensionType.organization;
 
-id(LegalEntity dimension) += id(dimension);
+id (LegalEntity dimension) + = id (dimension);
