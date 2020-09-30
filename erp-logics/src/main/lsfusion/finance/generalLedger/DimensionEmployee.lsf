@@ -2,12 +2,12 @@ MODULE DimensionEmployee;
 
 REQUIRE Dimension, Employee;
 
-//-- Employee
-EXTEND CLASS Employee : Dimension;
+// - Employee
+EXTEND CLASS Employee: Dimension;
 EXTEND CLASS DimensionType {
-    employee 'МОЛ (сотрудник)'
+     employee 'Employee'
 }
-name (Employee dimension) += ISTRING[255](positionName(dimension));
-dimensionType (Employee dimension) += WHEN dimension IS Employee THEN DimensionType.employee;
+name (Employee dimension) + = ISTRING [255] (positionName (dimension));
+dimensionType (Employee dimension) + = WHEN dimension IS Employee THEN DimensionType.employee;
 
-id(Employee dimension) += id(dimension);
+id (Employee dimension) + = id (dimension);
