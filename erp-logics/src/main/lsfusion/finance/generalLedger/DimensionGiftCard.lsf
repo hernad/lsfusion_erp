@@ -2,11 +2,11 @@ MODULE DimensionGiftCard;
 
 REQUIRE Dimension, GiftCard;
 
-EXTEND CLASS GiftCard : Dimension;
+EXTEND CLASS GiftCard: Dimension;
 EXTEND CLASS DimensionType {
-    giftCard 'Подарочный сертификат'
+     giftCard 'Gift Certificate'
 }
-name[Dimension](GiftCard dimension) += seriesNumber(dimension);
-dimensionType (GiftCard dimension) += WHEN dimension IS GiftCard THEN DimensionType.giftCard;
+name [Dimension] (GiftCard dimension) + = seriesNumber (dimension);
+dimensionType (GiftCard dimension) + = WHEN dimension IS GiftCard THEN DimensionType.giftCard;
 
-id(GiftCard dimension) += ISTRING[20](id(dimension));
+id (GiftCard dimension) + = ISTRING [20] (id (dimension));
