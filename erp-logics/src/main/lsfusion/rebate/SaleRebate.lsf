@@ -5,177 +5,179 @@ REQUIRE RebateDashboard, SaleInvoice;
 PRIORITY Sale;
 NAMESPACE Rebate;
 
-//-- Выписка накладной
+// - Issue invoice
 
-@defineOperationProperty(showRebate, 'Ретро-бонусы', showContainer);
+@defineOperationProperty (showRebate, 'Retro bonuses', showContainer);
 
-showRebate (Invoice i) = showRebate(operation(i));
+showRebate (Invoice i) = showRebate (operation (i));
 
 TABLE rebateUserInvoice (Sale.UserInvoice);
 
-rebateSku = DATA Sku();
-nameRebateSku 'Ретро-бонус (услуга)' () = name(rebateSku());
+rebateSku = DATA Sku ();
+nameRebateSku 'Retro bonus (service)' () = name (rebateSku ());
 
 rebateOperation = DATA Sale.Operation ();
-nameRebateOperation 'Ретро-бонус (операция)' () = Sale.name(rebateOperation());
+nameRebateOperation 'Retro bonus (operation)' () = Sale.name (rebateOperation ());
 
 EXTEND FORM options
-    PROPERTIES () nameRebateSku, nameRebateOperation 
+    PROPERTIES () nameRebateSku, nameRebateOperation
 ;
 DESIGN options {
     pane {
         NEW rebate {
             fill = 1;
-            caption = 'Ретро-бонусы';
-            MOVE PROPERTY (nameRebateSku());
-            MOVE PROPERTY (nameRebateOperation());
+            caption = 'Retro Bonuses';
+            MOVE PROPERTY (nameRebateSku ());
+            MOVE PROPERTY (nameRebateOperation ());
         }
     }
 }
 
-fromDate 'Дата с' = ABSTRACT DATE (Sale.Invoice);
-fromDate 'Дата с' = DATA DATE (Sale.UserInvoice) TABLE rebateUserInvoice;
-fromDate(Sale.UserInvoice i) += fromDate(i);
+fromDate 'Date since' = ABSTRACT DATE (Sale.Invoice);
+fromDate 'Date since' = DATA DATE (Sale.UserInvoice) TABLE rebateUserInvoice;
+fromDate (Sale.UserInvoice i) + = fromDate (i);
 
 
-toDate 'Дата по' = ABSTRACT DATE (Sale.Invoice);
-toDate 'Дата по'  = DATA DATE (Sale.UserInvoice) TABLE rebateUserInvoice;
-toDate(Sale.UserInvoice i) += toDate(i);
+toDate 'Date by' = ABSTRACT DATE (Sale.Invoice);
+toDate 'Date by' = DATA DATE (Sale.UserInvoice) TABLE rebateUserInvoice;
+toDate (Sale.UserInvoice i) + = toDate (i);
 
 rebateAgreement = ABSTRACT Agreement (Sale.Invoice);
-descriptionRebateAgreement 'Соглашение (бонусы)' (Sale.Invoice i) = description(rebateAgreement(i));
+descriptionRebateAgreement 'Agreement (bonuses)' (Sale.Invoice i) = description (rebateAgreement (i));
 rebateAgreement = DATA Agreement (Sale.UserInvoice) TABLE rebateUserInvoice;
-descriptionRebateAgreement 'Соглашение (бонусы)' (Sale.UserInvoice i) = description(rebateAgreement(i));
-rebateAgreement(Sale.UserInvoice i) += rebateAgreement(i);
+descriptionRebateAgreement 'Agreement (bonuses)' (Sale.UserInvoice i) = description (rebateAgreement (i));
+rebateAgreement (Sale.UserInvoice i) + = rebateAgreement (i);
 
 EXTEND FORM userInvoice
-    PROPERTIES (i) SHOWIF showRebate(i) fromDate, toDate, descriptionRebateAgreement
+    PROPERTIES (i) SHOWIF showRebate (i) fromDate, toDate, descriptionRebateAgreement
 ;
 DESIGN userInvoice {
     headerMainParams {
         NEW rebate {
             type = CONTAINERH;
-            caption = 'Ретро-бонусы';
-            MOVE PROPERTY(fromDate(i));
-            MOVE PROPERTY(toDate(i));
-            MOVE PROPERTY(descriptionRebateAgreement(i));
+            caption = 'Retro Bonuses';
+            MOVE PROPERTY (fromDate (i));
+            MOVE PROPERTY (toDate (i));
+            MOVE PROPERTY (descriptionRebateAgreement (i));
         }
 
-    }   
+    }
 }
 
 
-CONSTRAINT rebateAgreement(Sale.UserInvoice o) AND NOT inSupplier(rebateAgreement(o), customer(o)) AND 
-           (CHANGED(rebateAgreement(o)) OR CHANGED(customer(o)))
-           CHECKED BY rebateAgreement[Sale.UserInvoice]
-           MESSAGE 'Соглашение (бонусы) должно быть между заданными организациями (поставщик)';
+CONSTRAINT rebateAgreement (Sale.UserInvoice o) AND NOT inSupplier (rebateAgreement (o), customer (o)) AND
+           (CHANGED (rebateAgreement (o)) OR CHANGED (customer (o)))
+           CHECKED BY rebateAgreement [Sale.UserInvoice]
+           MESSAGE 'The agreement (bonuses) must be between the given organizations (supplier)';
 
-CONSTRAINT rebateAgreement(Sale.UserInvoice o)
-           AND NOT inCustomer(rebateAgreement(o), supplier(o)) AND 
-           (CHANGED(rebateAgreement(o)) OR CHANGED(supplier(o)))
-           CHECKED BY rebateAgreement[Sale.UserInvoice]
-           MESSAGE 'Соглашение (бонусы) должно быть между заданными организациями (покупатель)';
+CONSTRAINT rebateAgreement (Sale.UserInvoice o)
+           AND NOT inCustomer (rebateAgreement (o), supplier (o)) AND
+           (CHANGED (rebateAgreement (o)) OR CHANGED (supplier (o)))
+           CHECKED BY rebateAgreement [Sale.UserInvoice]
+           MESSAGE 'Agreement (bonuses) must be between the specified organizations (buyer)';
 
-//CONSTRAINT agreement(UserInvoice o) AND NOT (fromDateTime(agreement(o)) <= dateTime(o) 
-//           AND NOT (toDateTime(agreement(o)) < dateTime(o))) AND NOT (dateFromConstraintAgreementUserInvoice() > date(o)) AND 
-//           (CHANGED(agreement(o)) OR CHANGED(dateTime(o)))
-//           CHECKED BY agreement[UserInvoice]
-//           MESSAGE 'Соглашение просрочено или еще не действует';
+
+// CONSTRAINT agreement (UserInvoice o) AND NOT (fromDateTime (agreement (o)) <= dateTime (o)
+// AND NOT (toDateTime (agreement (o)) <dateTime (o))) AND NOT (dateFromConstraintAgreementUserInvoice ()> date (o)) AND
+// (CHANGED (agreement (o)) OR CHANGED (dateTime (o)))
+// CHECKED BY agreement [UserInvoice]
+// MESSAGE 'The agreement is expired or not yet valid';
       
-exDescription (Sale.Invoice i) = CONCAT '', 'Ретро-бонусы № '+seriesNumber(i), ' от '+date(i), ' за период с '+fromDate(i), ' по '+toDate(i);  
+exDescription (Sale.Invoice i) = CONCAT '', 'Retro bonuses #' + seriesNumber (i), 'from' + date (i), 'for the period from' + fromDate (i), 'to' + toDate ( i);
                
 lastInvoice = GROUP LAST Invoice i
-    ORDER toDate(i), i
-    WHERE isPosted(i) 
-    BY supplier(i), customer(i), rebateAgreement(i) COMPLEX;
+    ORDER toDate (i), i
+    WHERE isPosted (i)
+    BY supplier (i), customer (i), rebateAgreement (i) COMPLEX;
 
-descriptionLastInvoice 'Последняя накладная' (LegalEntity c, LegalEntity s, Agreement a) = exDescription(lastInvoice(c,s,a));
+descriptionLastInvoice 'Last Invoice' (LegalEntity c, LegalEntity s, Agreement a) = exDescription (lastInvoice (c, s, a));
     
-defaultSupplierStock (Operation operation, LegalEntity) = GROUP MIN Stock stock IF inSupplier(stock,operation) 
-                                                    AND isCompany(stock) 
-                                                    AND inSupplier(legalEntity(stock),operation)
-                                                    AND isSeller(legalEntity(stock))
-                                                        BY legalEntity(stock);  
+defaultSupplierStock (Operation operation, LegalEntity) = GROUP MIN Stock stock IF inSupplier (stock, operation)
+                                                    AND isCompany (stock)
+                                                    AND inSupplier (legalEntity (stock), operation)
+                                                    AND isSeller (legalEntity (stock))
+                                                        BY legalEntity (stock);
     
-createInvoice  'Создать накладые' (LegalEntity c, DATE df, DATE dt)  { 
-    IF rebateSku() AND rebateOperation()  THEN {
-        IF  (GROUP SUM 1 IF select(Agreement a,LegalEntity l)) THEN {
-            FOR  select(Agreement a,LegalEntity s) DO { 
-                IF sumRebate(a,s) THEN {    
-                    IF NOT toDate(lastInvoice(c,s,a)) >= df THEN NEWSESSION {   
-                        NEW i = Sale.UserInvoice {                
-                            supplier(i) <- c;
-                            customer(i) <- s;
-                            Sale.operation(i) <- rebateOperation();
-                            supplierStock(i) <- defaultSupplierStock(operation(i),supplier(i));
-                            fromDate(i) <- df; 
-                            toDate(i) <- dt;
-                            rebateAgreement(i) <- a;
-                            isPosted(i) <- TRUE;
+createInvoice 'Create invoices' (LegalEntity c, DATE df, DATE dt) {
+    IF rebateSku () AND rebateOperation () THEN {
+        IF (GROUP SUM 1 IF select (Agreement a, LegalEntity l)) THEN {
+            FOR select (Agreement a, LegalEntity s) DO {
+                IF sumRebate (a, s) THEN {
+                    IF NOT toDate (lastInvoice (c, s, a))> = df THEN NEWSESSION {
+                        NEW i = Sale.UserInvoice {
+                            supplier (i) <- c;
+                            customer (i) <- s;
+                            Sale.operation (i) <- rebateOperation ();
+                            supplierStock (i) <- defaultSupplierStock (operation (i), supplier (i));
+                            fromDate (i) <- df;
+                            toDate (i) <- dt;
+                            rebateAgreement (i) <- a;
+                            isPosted (i) <- TRUE;
                             
                             NEW d = Sale.UserInvoiceDetail {
-                                userInvoice(d) <- i;
-                                sku(d) <- rebateSku();
-                                quantity(d) <- 1.0;
-                                price(d) <- NUMERIC[16,4](sumRebate(a,s));
+                                userInvoice (d) <- i;
+                                sku (d) <- rebateSku ();
+                                quantity (d) <- 1.0;
+                                price (d) <- NUMERIC [16,4] (sumRebate (a, s));
                             }
-                            executeLocalEvents('Sale.userInvoice');                    
+                            executeLocalEvents ('Sale.userInvoice');
                         }
                         APPLY;
-                        IF NOT canceled() THEN {
-                            select (a,s) <- NULL;
-                        } 
+                        IF NOT canceled () THEN {
+                            select (a, s) <- NULL;
+                        }
                     } ELSE {
-                        MESSAGE 'Для поставщика '+name(s)+' и '+description(a)+' уже создана накладная' NOWAIT ;
-                    }  
+                        MESSAGE 'For supplier' + name (s) + 'and' + description (a) + 'an invoice has already been created' NOWAIT;
+                    }
                 } ELSE {
-                    MESSAGE 'Для поставщика '+name(s)+' и '+description(a)+' нет суммы услуг' NOWAIT ;
-                }            
-            }        
+                    MESSAGE 'For the provider' + name (s) + 'and' + description (a) + 'there is no amount of services' NOWAIT;
+                }
+            }
         } ELSE {
-            MESSAGE 'Не отмечены соглашения для обработки';
+            MESSAGE 'Agreements not marked for processing';
         }
  
     } ELSE {
-        MESSAGE 'Не задано значение операции или услуги по умолчанию в разделе Администрирование/Настройки/Ретро-бонусы';
-    }       
-} 
+        MESSAGE 'The default value of the operation or service is not set in the Administration / Settings / Retro bonuses section';
+    }
+}
 
 EXTEND FORM rebateDashboard
 
     OBJECTS i = Sale.Invoice LAST
-    PROPERTIES (i) READONLY isClosed 
+    PROPERTIES (i) READONLY isClosed
                             
-    PROPERTIES (i) READONLY isPosted, number, series, date, time                                
+    PROPERTIES (i) READONLY isPosted, number, series, date, time
     PROPERTIES (i) READONLY nameSupplier, nameSupplierStock, nameCustomer, nameCustomerStock,
                             nameCurrency, descriptionRebateAgreement, fromDate, toDate
                             
     PROPERTIES (i) READONLY countInvoiceDetail, quantityInvoiceDetail, sumInvoiceDetail,
                             VATSumInvoiceDetail, invoiceSumInvoiceDetail
-    PROPERTIES (i) READONLY note 
+    PROPERTIES (i) READONLY note
 
-    PROPERTIES READONLY descriptionLastInvoice(c,s,a)
-    PROPERTIES createInvoice(c,dFrom,dTo) TOOLBAR DRAW as
+    PROPERTIES READONLY descriptionLastInvoice (c, s, a)
+    PROPERTIES createInvoice (c, dFrom, dTo) TOOLBAR DRAW as
 
-    FILTERS (operation(i) == rebateOperation()) OR (i IS Sale.Invoice AND NOT rebateOperation()),
-            supplier(i) == c 
+    FILTERS (operation (i) == rebateOperation ()) OR (i IS Sale.Invoice AND NOT rebateOperation ()),
+            supplier (i) == c
 
-    PROPERTIES (i) NEWSESSION NEW[UserInvoice], editI = EDIT SHOWIF overShowEdit(i)
-    PROPERTIES (i) close[UserInvoice] SHOWIF showClose(i), open SHOWIF showOpen(i)
-    PROPERTIES (i) NEWSESSION deletei=DELETE SHOWIF overShowDelete(i)
+    PROPERTIES (i) NEWSESSION NEW [UserInvoice], editI = EDIT SHOWIF overShowEdit (i)
+    PROPERTIES (i) close [UserInvoice] SHOWIF showClose (i), open SHOWIF showOpen (i)
+    PROPERTIES (i) NEWSESSION deletei = DELETE SHOWIF overShowDelete (i)
     
     FILTERGROUP customer
-        FILTER 'По соглашению' rebateAgreement(i) == a AND customer(i) == s 'F5' DEFAULT 
+        FILTER 'By convention' rebateAgreement (i) == a AND customer (i) == s 'F5' DEFAULT
 ;
+
 DESIGN rebateDashboard {
     BOX {
-        MOVE BOX(dates);
+        MOVE BOX (dates);
         NEW body {
             type = SPLITV;
             fill = 1;
-            MOVE BOX(as);
-            MOVE BOX(i);
+            MOVE BOX (as);
+            MOVE BOX (i);
         }
         MOVE TOOLBARBOX;
     }
-} 
+}
