@@ -2,234 +2,233 @@ MODULE GeneralLedger;
 
 REQUIRE GLAccountType, Operation, EmployeeLegalEntity, Service;
 
-CLASS ABSTRACT GLDocument 'Регистр-основание';
-TABLE GLDocument(GLDocument);
+CLASS ABSTRACT GLDocument 'Base Case';
+TABLE GLDocument (GLDocument);
 
-GROUP generalLedger 'Проводки' : base;
+GROUP generalLedger 'Postings': base;
 
-isPosted 'Проведен' = ABSTRACT BOOLEAN (GLDocument) MATERIALIZED;
+isPosted 'Passed' = ABSTRACT BOOLEAN (GLDocument) MATERIALIZED;
 
-name 'Регистр-основание' = ABSTRACT ISTRING[200] (GLDocument) MATERIALIZED;
-number 'Номер' = ABSTRACT STRING[28] (GLDocument) IN numbered CHARWIDTH 7 MATERIALIZED;
-series 'Серия' = ABSTRACT BPSTRING[2] (GLDocument) IN numbered CHARWIDTH 3 NOFLEX MATERIALIZED;
-seriesNumber 'Серия/Номер' (GLDocument GLDocument) = CONCAT '', series(GLDocument), number(GLDocument) CHARWIDTH 7;
+name 'Base Case' = ABSTRACT ISTRING [200] (GLDocument) MATERIALIZED;
+number 'Number' = ABSTRACT STRING [28] (GLDocument) IN numbered CHARWIDTH 7 MATERIALIZED;
+series 'Series' = ABSTRACT BPSTRING [2] (GLDocument) IN numbered CHARWIDTH 3 NOFLEX MATERIALIZED;
+seriesNumber 'Series / Number' (GLDocument GLDocument) = CONCAT '', series (GLDocument), number (GLDocument) CHARWIDTH 7;
 
-dateTime 'Дата/время' = ABSTRACT DATETIME (GLDocument) MATERIALIZED;
-date 'Дата' (GLDocument document) = toDate(dateTime(document));
-time 'Время' (GLDocument document) = toTime(dateTime(document));
+dateTime 'Date / Time' = ABSTRACT DATETIME (GLDocument) MATERIALIZED;
+date 'Date' (GLDocument document) = toDate (dateTime (document));
+time 'Time' (GLDocument document) = toTime (dateTime (document));
 
-operation 'Операция' = ABSTRACT Operation (GLDocument) MATERIALIZED;
+operation 'Operation' = ABSTRACT Operation (GLDocument) MATERIALIZED;
 
-onlineGeneralLedger 'Создавать проводки онлайн' = DATA BOOLEAN () IN generalLedger COMPLEX;
-reportinGeneralLedger 'Запретить редактировать проводки после отчетного периода' = DATA BOOLEAN () IN generalLedger;
-dateReportingGeneralLedger 'Дата отчетного периода' = DATA DATE () IN generalLedger;
-dataMaxDateGeneralLedger 'Конец отчетного периода' = DATA DATE ();
-maxDateGeneralLedger 'Конец отчетного периода' = OVERRIDE dataMaxDateGeneralLedger(), 2040_12_31;
+onlineGeneralLedger 'Create transactions online' = DATA BOOLEAN () IN generalLedger COMPLEX;
+reportinGeneralLedger 'Disable editing transactions after the reporting period' = DATA BOOLEAN () IN generalLedger;
+dateReportingGeneralLedger 'Reporting period date' = DATA DATE () IN generalLedger;
+dataMaxDateGeneralLedger 'End of reporting period' = DATA DATE ();
+maxDateGeneralLedger 'End of reporting period' = OVERRIDE dataMaxDateGeneralLedger (), 2040_12_31;
 
 EXTEND FORM options
-    OBJECTS lgl = LegalEntity PANEL 
+    OBJECTS lgl = LegalEntity PANEL
     PROPERTIES (lgl) name SELECTOR
-    PROPERTIES() onlineGeneralLedger, reportinGeneralLedger, dateReportingGeneralLedger, maxDateGeneralLedger
-    FILTERS accessCompany(currentUser(), lgl)
+    PROPERTIES () onlineGeneralLedger, reportinGeneralLedger, dateReportingGeneralLedger, maxDateGeneralLedger
+    FILTERS accessCompany (currentUser (), lgl)
 
 ;
 DESIGN options {
     pane {
-        NEW generalLedger{
+        NEW generalLedger {
             type = CONTAINERV;
-            caption = 'Проводки';
-            MOVE PROPERTY (onlineGeneralLedger());
-            MOVE PROPERTY (reportinGeneralLedger());
+            caption = 'Transactions';
+            MOVE PROPERTY (onlineGeneralLedger ());
+            MOVE PROPERTY (reportinGeneralLedger ());
             NEW period {
                 type = CONTAINERH;
-                MOVE PROPERTY (dateReportingGeneralLedger());
-                MOVE PROPERTY (maxDateGeneralLedger());                     
+                MOVE PROPERTY (dateReportingGeneralLedger ());
+                MOVE PROPERTY (maxDateGeneralLedger ());
             }
-            MOVE BOX(lgl);
+            MOVE BOX (lgl);
         }
     }
 }
-//-------------------------- Проводки -------------------------//
 
-CLASS ABSTRACT GeneralLedger 'Проводка';
-TABLE generalLedger(GeneralLedger);
+// -------------------------- Postings --------------------- ---- //
 
-CLASS UserGeneralLedger 'Проводка (польз.)': GeneralLedger;
+CLASS ABSTRACT GeneralLedger 'Posting';
+TABLE generalLedger (GeneralLedger);
 
-@defineDocumentInterfaceHeaderCreated(GeneralLedger);
+CLASS UserGeneralLedger 'Post (user)': GeneralLedger;
+
+@defineDocumentInterfaceHeaderCreated (GeneralLedger);
 
 @defineDocumentInterfaceHeaderPosted (GeneralLedger);
-@defineDocumentInterfaceHeaderTimePrefix(GeneralLedger, , );
-@deriveDocumentHeaderTimePrefix(UserGeneralLedger, );
+@defineDocumentInterfaceHeaderTimePrefix (GeneralLedger,,);
+@deriveDocumentHeaderTimePrefix (UserGeneralLedger,);
 
 GLDocument = ABSTRACT GLDocument (GeneralLedger) MATERIALIZED INDEXED;
-nameGLDocument 'Регистр (описание)' (GeneralLedger generalLedger) = name(GLDocument(generalLedger)) IN id;
+nameGLDocument 'Register (description)' (GeneralLedger generalLedger) = name (GLDocument (generalLedger)) IN id;
 
-numberGLDocument 'Регистр (номер)' (GeneralLedger generalLedger) = number(GLDocument(generalLedger)) IN numbered;
-seriesGLDocument 'Регистр (серия)' (GeneralLedger generalLedger) = series(GLDocument(generalLedger)) IN numbered;
-seriesNumberGLDocument 'Регистр (серия/номер)' (GeneralLedger generalLedger) = seriesNumber(GLDocument(generalLedger));
+numberGLDocument 'Register (number)' (GeneralLedger generalLedger) = number (GLDocument (generalLedger)) IN numbered;
+seriesGLDocument 'Register (series)' (GeneralLedger generalLedger) = series (GLDocument (generalLedger)) IN numbered;
+seriesNumberGLDocument 'Register (series / number)' (GeneralLedger generalLedger) = seriesNumber (GLDocument (generalLedger));
 
-operationGLDocument (GeneralLedger generalLedger) = operation(GLDocument(generalLedger));
+operationGLDocument (GeneralLedger generalLedger) = operation (GLDocument (generalLedger));
 
 GLDocument = DATA GLDocument (UserGeneralLedger);
-nameGLDocument 'Регистр-основание' (UserGeneralLedger userGeneralLedger) = name(GLDocument(userGeneralLedger));
+nameGLDocument 'Base Case' (UserGeneralLedger userGeneralLedger) = name (GLDocument (userGeneralLedger));
 
-numberGLDocument 'Регистр (номер)' (UserGeneralLedger userGeneralLedger) = number(GLDocument(userGeneralLedger));
-seriesGLDocument 'Регистр (серия)' (UserGeneralLedger userGeneralLedger) = series(GLDocument(userGeneralLedger));
-seriesNumberGLDocument 'Регистр (серия/номер)' (UserGeneralLedger userGeneralLedger) = seriesNumber(GLDocument(userGeneralLedger));
+numberGLDocument 'Case (number)' (UserGeneralLedger userGeneralLedger) = number (GLDocument (userGeneralLedger));
+seriesGLDocument 'Case (series)' (UserGeneralLedger userGeneralLedger) = series (GLDocument (userGeneralLedger));
+seriesNumberGLDocument 'Register (series / number)' (UserGeneralLedger userGeneralLedger) = seriesNumber (GLDocument (userGeneralLedger));
 
-operationGLDocument (UserGeneralLedger generalLedger) = operation(GLDocument(generalLedger));
+operationGLDocument (UserGeneralLedger generalLedger) = operation (GLDocument (generalLedger));
 
-idOperation 'Код операции' = ABSTRACT STRING[3] (GeneralLedger) MATERIALIZED;
-idOperation 'Код операции' = DATA STRING[3] (UserGeneralLedger);
-idOperation(UserGeneralLedger generalLedger) += idOperation(generalLedger);
+idOperation 'Operation code' = ABSTRACT STRING [3] (GeneralLedger) MATERIALIZED;
+idOperation 'Operation code' = DATA STRING [3] (UserGeneralLedger);
+idOperation (UserGeneralLedger generalLedger) + = idOperation (generalLedger);
 
-GLDocument (UserGeneralLedger generalLedger) += GLDocument (generalLedger);
+GLDocument (UserGeneralLedger generalLedger) + = GLDocument (generalLedger);
 
 legalEntity = ABSTRACT LegalEntity (GeneralLedger) MATERIALIZED NONULL DELETE;
-nameLegalEntity 'Компания' (GeneralLedger generalLedger) = name(legalEntity(generalLedger));
+nameLegalEntity 'Company' (GeneralLedger generalLedger) = name (legalEntity (generalLedger));
 legalEntity = DATA LegalEntity (UserGeneralLedger);
-nameLegalEntity 'Компания' (UserGeneralLedger userGeneralLedger) = name(legalEntity(userGeneralLedger));
-legalEntity (UserGeneralLedger generalLedger) += legalEntity (generalLedger);
+nameLegalEntity 'Company' (UserGeneralLedger userGeneralLedger) = name (legalEntity (userGeneralLedger));
+legalEntity (UserGeneralLedger generalLedger) + = legalEntity (generalLedger);
 
 debit = ABSTRACT GLAccount (GeneralLedger) MATERIALIZED;
-idDebit 'Дебет' (GeneralLedger generalLedger) = id(debit(generalLedger)) IN id;
+idDebit 'Debit' (GeneralLedger generalLedger) = id (debit (generalLedger)) IN id;
 debit = DATA GLAccount (UserGeneralLedger);
-idDebit 'Дебет' (UserGeneralLedger userGeneralLedger) = id(debit(userGeneralLedger));
-debit (UserGeneralLedger generalLedger) += debit (generalLedger);
-
+idDebit 'Debit' (UserGeneralLedger userGeneralLedger) = id (debit (userGeneralLedger));
+debit (UserGeneralLedger generalLedger) + = debit (generalLedger);
 
 credit = ABSTRACT GLAccount (GeneralLedger) MATERIALIZED;
-idCredit 'Кредит' (GeneralLedger generalLedger) = id(credit(generalLedger)) IN id;
+idCredit 'Credit' (GeneralLedger generalLedger) = id (credit (generalLedger)) IN id;
 credit = DATA GLAccount (UserGeneralLedger);
-idCredit 'Кредит' (UserGeneralLedger userGeneralLedger) = id(credit(userGeneralLedger));
-credit (UserGeneralLedger generalLedger) += credit (generalLedger);
+idCredit 'Credit' (UserGeneralLedger userGeneralLedger) = id (credit (userGeneralLedger));
+credit (UserGeneralLedger generalLedger) + = credit (generalLedger);
 
-glAccountTypeDebit(GeneralLedger generalLedger) = GLAccountType(debit(generalLedger));
-glAccountTypeCredit(GeneralLedger generalLedger) = GLAccountType(credit(generalLedger));
+glAccountTypeDebit (GeneralLedger generalLedger) = GLAccountType (debit (generalLedger));
+glAccountTypeCredit (GeneralLedger generalLedger) = GLAccountType (credit (generalLedger));
 
-CONSTRAINT GLAccountType(debit(UserGeneralLedger userGeneralLedger)) != GLAccountType(credit(userGeneralLedger))
-    CHECKED BY  debit[UserGeneralLedger], credit[UserGeneralLedger]
-    MESSAGE 'У дебета и кредита разные планы счетов';
+CONSTRAINT GLAccountType (debit (UserGeneralLedger userGeneralLedger))! = GLAccountType (credit (userGeneralLedger))
+    CHECKED BY debit [UserGeneralLedger], credit [UserGeneralLedger]
+    MESSAGE 'Debit and credit have different charts of accounts';
 
-sum 'Сумма' = ABSTRACT NUMERIC[18,4] (GeneralLedger) MATERIALIZED;
-sum 'Сумма' = DATA NUMERIC[18,4] (UserGeneralLedger);
-sum (UserGeneralLedger generalLedger) += sum (generalLedger);
+sum 'Sum' = ABSTRACT NUMERIC [18,4] (GeneralLedger) MATERIALIZED;
+sum 'Sum' = DATA NUMERIC [18,4] (UserGeneralLedger);
+sum (UserGeneralLedger generalLedger) + = sum (generalLedger);
 
-quantity 'Кол-во'= ABSTRACT NUMERIC[16,5] (GeneralLedger) MATERIALIZED;
-quantity 'Кол-во'= DATA NUMERIC[16,5] (UserGeneralLedger);
-quantity (UserGeneralLedger generalLedger) += quantity (generalLedger);
+quantity 'Quantity' = ABSTRACT NUMERIC [16,5] (GeneralLedger) MATERIALIZED;
+quantity 'Quantity' = DATA NUMERIC [16,5] (UserGeneralLedger);
+quantity (UserGeneralLedger generalLedger) + = quantity (generalLedger);
 
-description 'Описание' = ABSTRACT ISTRING[350] (GeneralLedger) MATERIALIZED CHARWIDTH 40;
-description 'Описание' = DATA STRING[255] (UserGeneralLedger) CHARWIDTH 40;
-description (UserGeneralLedger generalLedger) += description (generalLedger);
+description 'Description' = ABSTRACT ISTRING [350] (GeneralLedger) MATERIALIZED CHARWIDTH 40;
+description 'Description' = DATA STRING [255] (UserGeneralLedger) CHARWIDTH 40;
+description (UserGeneralLedger generalLedger) + = description (generalLedger);
 
-skip 'Не изменять значение' (generalLedger) = ABSTRACT BOOLEAN (GeneralLedger) MATERIALIZED;
-skip 'Не изменять значение' (userGeneralLedger) = DATA BOOLEAN (UserGeneralLedger);
-skip (UserGeneralLedger generalLedger) += skip (generalLedger);
+skip 'Do not change value' (generalLedger) = ABSTRACT BOOLEAN (GeneralLedger) MATERIALIZED;
+skip 'Do not change value' (userGeneralLedger) = DATA BOOLEAN (UserGeneralLedger);
+skip (UserGeneralLedger generalLedger) + = skip (generalLedger);
 
-CONSTRAINT isPosted(GeneralLedger ledger) AND reportinGeneralLedger() AND date(ledger) < dateReportingGeneralLedger() AND CHANGED(sum(ledger))
-    MESSAGE 'Запрещено редактировать проводки после отчетного периода';
+CONSTRAINT isPosted (GeneralLedger ledger) AND reportinGeneralLedger () AND date (ledger) <dateReportingGeneralLedger () AND CHANGED (sum (ledger))
+    MESSAGE 'It is forbidden to edit transactions after the reporting period';
 
-// ----------------------------- Сальдо ---------------------------//
+// ----------------------------- Balance ------------------ --------- //
 
-META  defineGLAccountSum (caption, concrete, prefix)
-    // без учета текущей даты
-    prefix###sumB###concrete 'Сумма на начало дня '###caption (GLAccount GLAccount, LegalEntity company, DATE date) = sum###concrete(GLAccount, company)
+META defineGLAccountSum (caption, concrete, prefix)
+    // excluding the current date
+    prefix ### sumB ### concrete 'Amount at the beginning of the day' ### caption (GLAccount GLAccount, LegalEntity company, DATE date) = sum ### concrete (GLAccount, company)
                                                                       (-) (GROUP
-                                                                                 SUM sum###concrete(GLAccount, company, DATE dateIn) IF dateIn >= date);
-    // с учетом текущей даты
-    prefix###sumA###concrete 'Сумма на конец дня '###caption (GLAccount GLAccount, LegalEntity company, DATE date) = sum###concrete(GLAccount, company)
+                                                                                 SUM sum ### concrete (GLAccount, company, DATE dateIn) IF dateIn> = date);
+    // considering the current date
+    prefix ### sumA ### concrete 'End of day amount' ### caption (GLAccount GLAccount, LegalEntity company, DATE date) = sum ### concrete (GLAccount, company)
                                                                      (-) (GROUP
-                                                                                SUM sum###concrete(GLAccount, company, DATE dateIn) IF dateIn > date);
+                                                                                SUM sum ### concrete (GLAccount, company, DATE dateIn) IF dateIn> date);
 END
 META defineGLAccountBalance (caption, prefix)
-    prefix###balanceAGL 'Сальдо на начало дня '###caption (GLAccount GLAccount, LegalEntity company, DATE date) =  prefix###sumADebit(GLAccount, company, date) (-) prefix###sumACredit(GLAccount, company, date);
-    prefix###balanceBGL 'Сальдо на конец дня '###caption (GLAccount GLAccount, LegalEntity company, DATE date) =  prefix###sumBDebit(GLAccount, company, date) (-) prefix###sumBCredit(GLAccount, company, date);
+    prefix ### balanceAGL 'Start of day balance' ### caption (GLAccount GLAccount, LegalEntity company, DATE date) = prefix ### sumADebit (GLAccount, company, date) (-) prefix ### sumACredit (GLAccount, company , date);
+    prefix ### balanceBGL 'End of day balance' ### caption (GLAccount GLAccount, LegalEntity company, DATE date) = prefix ### sumBDebit (GLAccount, company, date) (-) prefix ### sumBCredit (GLAccount, company , date);
 END
 
-sumCredit 'Сумма (кредит)' (GLAccount, company)= GROUP SUM sum(GeneralLedger ledger) IF isPosted(ledger) BY credit(ledger), legalEntity(ledger);
-sumDebit 'Сумма (дебет)' (GLAccount, company)= GROUP SUM sum(GeneralLedger ledger) IF isPosted(ledger) BY debit(ledger), legalEntity(ledger);
-balance 'Сальдо' (GLAccount GLAccount, LegalEntity company)= sumDebit(GLAccount, company) (-) sumCredit(GLAccount, company);
+sumCredit 'Amount (credit)' (GLAccount, company) = GROUP SUM sum (GeneralLedger ledger) IF isPosted (ledger) BY credit (ledger), legalEntity (ledger);
+sumDebit 'Amount (debit)' (GLAccount, company) = GROUP SUM sum (GeneralLedger ledger) IF isPosted (ledger) BY debit (ledger), legalEntity (ledger);
+balance 'Balance' (GLAccount GLAccount, LegalEntity company) = sumDebit (GLAccount, company) (-) sumCredit (GLAccount, company);
 
-TABLE GLAccountLegalEntityDate(GLAccount, LegalEntity, DATE);
-sumCredit 'Сумма (кредит)' (GLAccount, company, date)= GROUP SUM sum(GeneralLedger ledger) IF isPosted(ledger)
-    BY credit(ledger), legalEntity(ledger), date(ledger);
-sumDebit 'Сумма (дебет)' (GLAccount, company, date)= GROUP SUM sum(GeneralLedger ledger) IF isPosted(ledger)
-    BY debit(ledger), legalEntity(ledger), date(ledger);
-balance 'Сальдо' (GLAccount GLAccount, LegalEntity company, DATE date) =
-    sumDebit(GLAccount, company, date) (-) sumCredit(GLAccount, company, date);
+TABLE GLAccountLegalEntityDate (GLAccount, LegalEntity, DATE);
+sumCredit 'Amount (credit)' (GLAccount, company, date) = GROUP SUM sum (GeneralLedger ledger) IF isPosted (ledger)
+    BY credit (ledger), legalEntity (ledger), date (ledger);
+sumDebit 'Amount (debit)' (GLAccount, company, date) = GROUP SUM sum (GeneralLedger ledger) IF isPosted (ledger)
+    BY debit (ledger), legalEntity (ledger), date (ledger);
+balance 'Balance' (GLAccount GLAccount, LegalEntity company, DATE date) =
+    sumDebit (GLAccount, company, date) (-) sumCredit (GLAccount, company, date);
 
-sumCredit 'Сумма (кредит)' (GLAccount GLAccount, LegalEntity company, DATE dateFrom, DATE dateTo) = GROUP
+sumCredit 'Amount (Credit)' (GLAccount GLAccount, LegalEntity company, DATE dateFrom, DATE dateTo) = GROUP
         SUM
-        sumCredit(GLAccount, company, DATE date) IF date >= dateFrom AND date <= dateTo;
-sumDebit 'Сумма (дебет)' (GLAccount GLAccount, LegalEntity company, DATE dateFrom, DATE dateTo) = GROUP
+        sumCredit (GLAccount, company, DATE date) IF date> = dateFrom AND date <= dateTo;
+sumDebit 'Amount (debit)' (GLAccount GLAccount, LegalEntity company, DATE dateFrom, DATE dateTo) = GROUP
         SUM
-        sumDebit(GLAccount, company, DATE date) IF date >= dateFrom AND date <= dateTo;
-balance 'Сальдо' (GLAccount GLAccount, LegalEntity company, DATE dateFrom, DATE dateTo) =
-    sumDebit(GLAccount, company, dateFrom, dateTo) (-) sumCredit(GLAccount, company, dateFrom, dateTo);
+        sumDebit (GLAccount, company, DATE date) IF date> = dateFrom AND date <= dateTo;
+balance 'Balance' (GLAccount GLAccount, LegalEntity company, DATE dateFrom, DATE dateTo) =
+    sumDebit (GLAccount, company, dateFrom, dateTo) (-) sumCredit (GLAccount, company, dateFrom, dateTo);
 
-@defineGLAccountSum ('(кредит)', credit, );
-@defineGLAccountSum ('(дебет)', debit, );
-@defineGLAccountBalance ( , );
+@defineGLAccountSum ('(credit)', credit,);
+@defineGLAccountSum ('(debit)', debit,);
+@defineGLAccountBalance (,);
 
-//- Рекурсивно
-recSumCredit 'Сумма (кредит)' (GLAccount GLAccount, LegalEntity company)=  GROUP SUM sumCredit(GLAccount child, company)
-    IF isParent(child, GLAccount);
-recSumDebit 'Сумма (дебет)' (GLAccount GLAccount, LegalEntity company)=  GROUP SUM sumDebit(GLAccount child, company)
-    IF isParent(child, GLAccount);
-recBalance 'Сальдо' (GLAccount GLAccount, LegalEntity company)=
-    recSumDebit(GLAccount, company) (-) recSumCredit(GLAccount, company);
+// - Recursively
+recSumCredit 'Amount (Credit)' (GLAccount GLAccount, LegalEntity company) = GROUP SUM sumCredit (GLAccount child, company)
+    IF isParent (child, GLAccount);
+recSumDebit 'Amount (debit)' (GLAccount GLAccount, LegalEntity company) = GROUP SUM sumDebit (GLAccount child, company)
+    IF isParent (child, GLAccount);
+recBalance 'Balance' (GLAccount GLAccount, LegalEntity company) =
+    recSumDebit (GLAccount, company) (-) recSumCredit (GLAccount, company);
 
-recSumCredit 'Сумма (кредит)' (GLAccount GLAccount, LegalEntity company, DATE date)=  GROUP SUM sumCredit(GLAccount child, company, date)
-    IF isParent(child, GLAccount);
-recSumDebit 'Сумма (дебет)' (GLAccount GLAccount, LegalEntity company, DATE date)=  GROUP SUM sumDebit(GLAccount child, company, date)
-    IF isParent(child, GLAccount);
-recBalance 'Сальдо' (GLAccount GLAccount, LegalEntity company, DATE date) =
-    recSumDebit(GLAccount, company, date) (-) recSumCredit(GLAccount, company, date);
+recSumCredit 'Amount (Credit)' (GLAccount GLAccount, LegalEntity company, DATE date) = GROUP SUM sumCredit (GLAccount child, company, date)
+    IF isParent (child, GLAccount);
+recSumDebit 'Amount (debit)' (GLAccount GLAccount, LegalEntity company, DATE date) = GROUP SUM sumDebit (GLAccount child, company, date)
+    IF isParent (child, GLAccount);
+recBalance 'Balance' (GLAccount GLAccount, LegalEntity company, DATE date) =
+    recSumDebit (GLAccount, company, date) (-) recSumCredit (GLAccount, company, date);
 
-recSumCredit 'Сумма (кредит)' (GLAccount GLAccount, LegalEntity company, DATE dateFrom, DATE dateTo)=  GROUP SUM sumCredit(GLAccount child, company, dateFrom, dateTo)
-    IF isParent(child, GLAccount);
-recSumDebit 'Сумма (дебет)' (GLAccount GLAccount, LegalEntity company, DATE dateFrom, DATE dateTo)=  GROUP SUM sumDebit(GLAccount child, company, dateFrom, dateTo)
-    IF isParent(child, GLAccount);
-recBalance 'Сальдо' (GLAccount GLAccount, LegalEntity company, DATE dateFrom, DATE dateTo) =
-    recSumDebit(GLAccount, company, dateFrom, dateTo) (-) recSumCredit(GLAccount, company, dateFrom, dateTo);
+recSumCredit 'Amount (Credit)' (GLAccount GLAccount, LegalEntity company, DATE dateFrom, DATE dateTo) = GROUP SUM sumCredit (GLAccount child, company, dateFrom, dateTo)
+    IF isParent (child, GLAccount);
+recSumDebit 'Amount (debit)' (GLAccount GLAccount, LegalEntity company, DATE dateFrom, DATE dateTo) = GROUP SUM sumDebit (GLAccount child, company, dateFrom, dateTo)
+    IF isParent (child, GLAccount);
+recBalance 'Balance' (GLAccount GLAccount, LegalEntity company, DATE dateFrom, DATE dateTo) =
+    recSumDebit (GLAccount, company, dateFrom, dateTo) (-) recSumCredit (GLAccount, company, dateFrom, dateTo);
 
 
-@defineGLAccountSum ('(кредит)', credit, rec);
-@defineGLAccountSum ('(дебет)', debit, rec);
-@defineGLAccountBalance ( , rec);
+@defineGLAccountSum ('(credit)', credit, rec);
+@defineGLAccountSum ('(debit)', debit, rec);
+@defineGLAccountBalance (, rec);
 
 EXTEND FORM GLAccounts
-    PROPERTIES(g,l,dFrom,dTo) READONLY BEFORE deletea recSumCredit, recSumDebit, recBalance
+    PROPERTIES (g, l, dFrom, dTo) READONLY BEFORE deletea recSumCredit, recSumDebit, recBalance
 
     OBJECTS gl = GeneralLedger
-    PROPERTIES(gl) READONLY date, description, idDebit,
+    PROPERTIES (gl) READONLY date, description, idDebit,
                    idCredit, sum
 
-    FILTERS isPosted(gl),
-            legalEntity(gl)==l,
-            date(gl) >= dFrom, date(gl) <= dTo
+    FILTERS isPosted (gl),
+            legalEntity (gl) == l,
+            date (gl)> = dFrom, date (gl) <= dTo
 
     FILTERGROUP filter4
-            FILTER 'По счету' debit(gl)==g OR credit(gl)==g 'F8' DEFAULT
-            FILTER 'Только дебет' debit(gl)==g 'F7'
-            FILTER 'Только кредит' credit(gl)==g 'F6'
+            FILTER 'By account' debit (gl) == g OR credit (gl) == g 'F8' DEFAULT
+            FILTER 'Debit only' debit (gl) == g 'F7'
+            FILTER 'Credit only' credit (gl) == g 'F6'
 ;
 DESIGN GLAccounts {
-    wor{
-        MOVE BOX(gl);
+    wor {
+        MOVE BOX (gl);
     }
 }
 
-
-FORM userGeneralLedger 'Проводка'
-    OBJECTS g=UserGeneralLedger PANEL
-    PROPERTIES(g) nameLegalEntity, nameGLDocument, description, date, time,
+FORM userGeneralLedger 'Posting'
+    OBJECTS g = UserGeneralLedger PANEL
+    PROPERTIES (g) nameLegalEntity, nameGLDocument, description, date, time,
                   idDebit, idCredit, quantity, sum
 
     EVENTS
-        ON OK prePost(g)
+        ON OK prePost (g)
 
     EDIT UserGeneralLedger OBJECT g
 ;
@@ -237,108 +236,108 @@ FORM userGeneralLedger 'Проводка'
 DESIGN userGeneralLedger {
     BOX {
         size = (1024, 768);
-        MOVE BOX(g) BEFORE TOOLBARBOX {
-            MOVE GROUP(documentHeader,g) {
+        MOVE BOX (g) BEFORE TOOLBARBOX {
+            MOVE GROUP (documentHeader, g) {
                 type = CONTAINERH;
-                MOVE PROPERTY(nameLegalEntity(g));
-                MOVE PROPERTY(nameGLDocument(g));
-                MOVE PROPERTY(description(g));
-                MOVE PROPERTY(date(g));
-                MOVE PROPERTY(time(g));
+                MOVE PROPERTY (nameLegalEntity (g));
+                MOVE PROPERTY (nameGLDocument (g));
+                MOVE PROPERTY (description (g));
+                MOVE PROPERTY (date (g));
+                MOVE PROPERTY (time (g));
             }
             NEW headerRow11 {
-                caption = 'Корреспонденция';
+                caption = 'Correspondence';
                 type = CONTAINERH;
-                MOVE PROPERTY(idDebit(g));
-                MOVE PROPERTY(idCredit(g));
-                MOVE PROPERTY(sum(g));
+                MOVE PROPERTY (idDebit (g));
+                MOVE PROPERTY (idCredit (g));
+                MOVE PROPERTY (sum (g));
             }
         }
-        PROPERTY(formOk()) {
-            caption = 'Провести';
+        PROPERTY (formOk ()) {
+            caption = 'Post';
         }
     }
 }
-is(UserGeneralLedger generalLedger) = generalLedger IS UserGeneralLedger;
+is (UserGeneralLedger generalLedger) = generalLedger IS UserGeneralLedger;
 
-overCopy  ABSTRACT LIST ( GeneralLedger, GeneralLedger);
-copy 'Копировать'(GeneralLedger generalLedger)  { 
-	NEWSESSION {
-	
-	    NEW g = UserGeneralLedger {
-	        legalEntity(g) <- legalEntity(generalLedger);
-	        description(g) <- description(generalLedger);
-	        sum(g) <- sum(generalLedger);
-	        quantity(g) <- quantity(generalLedger);
-	        credit(g) <- credit(generalLedger);
-	        debit(g) <- debit(generalLedger);
-	
-	        EXEC overCopy(generalLedger, g);
-	
-	        SHOW userGeneralLedger OBJECTS g = g DOCKED;
-	    }
-	}
+overCopy ABSTRACT LIST (GeneralLedger, GeneralLedger);
+copy 'Copy' (GeneralLedger generalLedger) {
+NEWSESSION {
+
+NEW g = UserGeneralLedger {
+legalEntity (g) <- legalEntity (generalLedger);
+description (g) <- description (generalLedger);
+sum (g) <- sum (generalLedger);
+quantity (g) <- quantity (generalLedger);
+credit (g) <- credit (generalLedger);
+debit (g) <- debit (generalLedger);
+
+EXEC overCopy (generalLedger, g);
+
+SHOW userGeneralLedger OBJECTS g = g DOCKED;
+}
+}
 } TOOLBAR;
 
-accessCompany(GeneralLedger gl) = accessCompany(currentUser(), legalEntity(gl)); 
+accessCompany (GeneralLedger gl) = accessCompany (currentUser (), legalEntity (gl));
 
-FORM generalLedgers 'Проводки'
+FORM generalLedgers 'Transactions'
     OBJECTS dates = (dFrom = DATE, dTo = DATE) PANEL
-    PROPERTIES valFrom = VALUE(dFrom), valTo = VALUE(dTo)
+    PROPERTIES valFrom = VALUE (dFrom), valTo = VALUE (dTo)
     
-    OBJECTS l = LegalEntity PANEL 
-    PROPERTIES(l) SELECTOR name
-    FILTERS isCompany(l),
-            accessCompany(currentUser(), l)    
+    OBJECTS l = LegalEntity PANEL
+    PROPERTIES (l) SELECTOR name
+    FILTERS isCompany (l),
+            accessCompany (currentUser (), l)
         
     OBJECTS g = GeneralLedger
-    PROPERTIES(g)  READONLY isPosted , dateTime, nameLegalEntity, nameGLDocument,
+    PROPERTIES (g) READONLY isPosted, dateTime, nameLegalEntity, nameGLDocument,
                    idOperation, description, numberGLDocument, seriesGLDocument, idDebit,
                    idCredit, quantity, sum
-    ORDERS dateTime(g), nameGLDocument(g)
-    FILTERS accessCompany(g)
-//    todo : не работает поскольку для абстрактного свойства не задано ни одной реализации
-//    PROPERTIES(g)  editGLDocumentGeneralLedger
+    ORDERS dateTime (g), nameGLDocument (g)
+    FILTERS accessCompany (g)
+// todo: doesn't work because no implementation is specified for the abstract property
+// PROPERTIES (g) editGLDocumentGeneralLedger
 
 
     PROPERTIES (g) READONLY PANEL createdNameUser, createdTime, createdHostnameComputer,
                                         postedNameUser, postedTime, postedHostnameComputer
 
-    PROPERTIES (g) NEWSESSION NEW[UserGeneralLedger], EDIT
+    PROPERTIES (g) NEWSESSION NEW [UserGeneralLedger], EDIT
     PROPERTIES (g) copy
-    PROPERTIES     NEWSESSION deleteg=DELETE(g) SHOWIF is(g)
+    PROPERTIES NEWSESSION deleteg = DELETE (g) SHOWIF is (g)
 
-    FILTERS toDate(dateTime(g))<= dTo AND toDate(dateTime(g))>= dFrom
+    FILTERS toDate (dateTime (g)) <= dTo AND toDate (dateTime (g))> = dFrom
     LIST GeneralLedger OBJECT g
 ;
 DESIGN generalLedgers {
     NEW tabTopContainer {
         type = TABBED;
         NEW topContainer {
-            caption = 'Создание';
+            caption = 'Creation';
             type = CONTAINERH;
-            MOVE BOX(dates){
-                caption = 'Период';
-                PROPERTY(valFrom){
-                    caption = 'Дата с';
+            MOVE BOX (dates) {
+                caption = 'Period';
+                PROPERTY (valFrom) {
+                    caption = 'Date since';
                 }
-                PROPERTY(valTo){
-                    caption = 'Дата по';
+                PROPERTY (valTo) {
+                    caption = 'Date by';
                 }
             }
-            MOVE BOX(l){
-                PROPERTY(name(l)){
+            MOVE BOX (l) {
+                PROPERTY (name (l)) {
                     caption = '';
                 }
             }
-        }    
+        }
     }
-    MOVE BOX(g);
+    MOVE BOX (g);
     NEW documentHistory {
-        caption = 'История';
+        caption = 'History';
 
-        MOVE GROUP(created,g);
-        MOVE GROUP(posted,g);
+        MOVE GROUP (created, g);
+        MOVE GROUP (posted, g);
     }
     MOVE TOOLBARBOX;
 }
@@ -349,298 +348,297 @@ NAVIGATOR {
     }
 }
 
-// ----------------------------------------------- Метакод по созданию проводок через агрегацию-------------------------------------------- //
+// ----------------------------------------------- Metacode on creating transactions through aggregation -------------------------------------------- / /
 
-//-- Для одного объекта
+// - For one object
 META defineGeneralLedgerAggregation (object, prop, companyProp, property, descriptionProp, debitV, creditV, accountType)
-    @defineGeneralLedgerAggregation (object, prop, companyProp, property, date, time, descriptionProp, debitV, creditV, accountType);
+     @defineGeneralLedgerAggregation (object, prop, companyProp, property, date, time, descriptionProp, debitV, creditV, accountType);
 END
 
 META defineGeneralLedgerAggregation (object, idGL, companyProp, property, dateProp, timeProp, descriptionProp, debitV, creditV, accountType)
-    @defineGeneralLedgerAggregation (object, idGL, ###idGL, companyProp, property, dateProp, timeProp, descriptionProp, debitV, creditV, accountType);
+     @defineGeneralLedgerAggregation (object, idGL, ### idGL, companyProp, property, dateProp, timeProp, descriptionProp, debitV, creditV, accountType);
 END
 
 META defineGeneralLedgerAggregation (object, idGL, classGL, companyProp, property, dateProp, timeProp, descriptionProp, debitV, creditV, accountType)
-    CLASS classGL###generalLedger : GeneralLedger;
+    CLASS classGL ### generalLedger: GeneralLedger;
 
-    TABLE idGL###generalLedger (classGL###generalLedger);
+    TABLE idGL ### generalLedger (classGL ### generalLedger);
 
-    needTo###property (###object object)=  property(object) IF onlineGeneralLedger();
-    idGL###generalLedger = AGGR ###idGL###generalLedger WHERE needTo###property(###object object) MATERIALIZED INDEXED;
+    needTo ### property (### object object) = property (object) IF onlineGeneralLedger ();
+    idGL ### generalLedger = AGGR ### idGL ### generalLedger WHERE needTo ### property (### object object) MATERIALIZED INDEXED;
 
-    GLDocument(classGL##GeneralLedger generalLedger) += object(generalLedger);
-    legalEntity(classGL##GeneralLedger generalLedger) += companyProp(object(generalLedger));
-    isPosted(classGL##GeneralLedger generalLedger) += isPosted(object(generalLedger));
-    description(classGL##GeneralLedger generalLedger) += descriptionProp(object(generalLedger));
-    date(classGL##GeneralLedger generalLedger) += dateProp(object(generalLedger));
-    time(classGL##GeneralLedger generalLedger) += timeProp(object(generalLedger));
-    debit(classGL##GeneralLedger generalLedger) += GLAccountIdTypeIdGLAccount(accountType, debitV) IF generalLedger IS classGL###generalLedger;
-    credit(classGL##GeneralLedger generalLedger) += GLAccountIdTypeIdGLAccount(accountType, creditV) IF generalLedger IS classGL###generalLedger;
-    sum(classGL##GeneralLedger generalLedger) += property(object(generalLedger));
+    GLDocument (classGL ## GeneralLedger generalLedger) + = object (generalLedger);
+    legalEntity (classGL ## GeneralLedger generalLedger) + = companyProp (object (generalLedger));
+    isPosted (classGL ## GeneralLedger generalLedger) + = isPosted (object (generalLedger));
+    description (classGL ## GeneralLedger generalLedger) + = descriptionProp (object (generalLedger));
+    date (classGL ## GeneralLedger generalLedger) + = dateProp (object (generalLedger));
+    time (classGL ## GeneralLedger generalLedger) + = timeProp (object (generalLedger));
+    debit (classGL ## GeneralLedger generalLedger) + = GLAccountIdTypeIdGLAccount (accountType, debitV) IF generalLedger IS classGL ### generalLedger;
+    credit (classGL ## GeneralLedger generalLedger) + = GLAccountIdTypeIdGLAccount (accountType, creditV) IF generalLedger IS classGL ### generalLedger;
+    sum (classGL ## GeneralLedger generalLedger) + = property (object (generalLedger));
 END
 
-//-- С операцией
-META defineGeneralLedgerAggregationOperation(object, idGL, companyProp, property, descriptionProp, debitV, creditV, accountType, keyProp)
-    idGL###property(###object object) = property(object) IF idOperation(object) == keyProp;
-    @defineGeneralLedgerAggregation (object, idGL, companyProp, idGL###property, descriptionProp, debitV, creditV, accountType);
+// - With operation
+META defineGeneralLedgerAggregationOperation (object, idGL, companyProp, property, descriptionProp, debitV, creditV, accountType, keyProp)
+    idGL ### property (### object object) = property (object) IF idOperation (object) == keyProp;
+    @defineGeneralLedgerAggregation (object, idGL, companyProp, idGL ### property, descriptionProp, debitV, creditV, accountType);
 END
 
-// ----------------------------------- Для двух объектов --------------------------------------- //
+// ----------------------------------- For two objects ---------- ----------------------------- //
 
-META defineGeneralLedgerDoubleAggregation (object1, object2, idGL, companyProp, property, descriptionProp, debitV, creditV, accountType)   //  object1 - документ
+META defineGeneralLedgerDoubleAggregation (object1, object2, idGL, companyProp, property, descriptionProp, debitV, creditV, accountType) // object1 is a document
     @defineGeneralLedgerDoubleAggregation (object1, object2, idGL, companyProp, property, date, time, descriptionProp, debitV, creditV, accountType);
 END
 
 META defineGeneralLedgerDoubleAggregation (object1, object2, idGL, companyProp, property, dateProp, timeProp, descriptionProp, debitV, creditV, accountType)
-    @defineGeneralLedgerDoubleAggregation (object1, object2, idGL, ###idGL, companyProp, property, dateProp, timeProp, descriptionProp, debitV, creditV, accountType);
+    @defineGeneralLedgerDoubleAggregation (object1, object2, idGL, ### idGL, companyProp, property, dateProp, timeProp, descriptionProp, debitV, creditV, accountType);
 END
 
 META defineGeneralLedgerDoubleAggregation (object1, object2, idGL, classGL, companyProp, property, dateProp, timeProp, descriptionProp, debitV, creditV, accountType)
 
-    CLASS classGL###generalLedger : GeneralLedger;
+    CLASS classGL ### generalLedger: GeneralLedger;
 
-    TABLE idGL###generalLedger (classGL###generalLedger);
+    TABLE idGL ### generalLedger (classGL ### generalLedger);
 
-    needTo##property (###object1 object1, ###object2 object2) = property(object1, object2) IF onlineGeneralLedger();
-    idGL###generalLedger = AGGR ###idGL###generalLedger WHERE needTo###property(###object1 object1, ###object2 object2) MATERIALIZED INDEXED;
+    needTo ## property (### object1 object1, ### object2 object2) = property (object1, object2) IF onlineGeneralLedger ();
+    idGL ### generalLedger = AGGR ### idGL ### generalLedger WHERE needTo ### property (### object1 object1, ### object2 object2) MATERIALIZED INDEXED;
 
-    GLDocument(idGL##GeneralLedger generalLedger) += object1(generalLedger);
-    legalEntity(idGL##GeneralLedger generalLedger) += companyProp(object1(generalLedger));
-    isPosted(idGL##GeneralLedger generalLedger) += isPosted(object1(generalLedger));
-    descriptionProp(idGL##GeneralLedger generalLedger) += descriptionProp(object1(generalLedger), object2(generalLedger));
-    date(idGL##GeneralLedger generalLedger) += dateProp(object1(generalLedger));
-    time(idGL##GeneralLedger generalLedger) += timeProp(object1(generalLedger));
-    debit(idGL##GeneralLedger generalLedger) += GLAccountIdTypeIdGLAccount(accountType, debitV) IF generalLedger IS classGL###generalLedger;
-    credit(idGL##GeneralLedger generalLedger) += GLAccountIdTypeIdGLAccount(accountType, creditV) IF generalLedger IS classGL###generalLedger;
-    sum(idGL##GeneralLedger generalLedger) += property(object1(generalLedger), object2(generalLedger));
+    GLDocument (idGL ## GeneralLedger generalLedger) + = object1 (generalLedger);
+    legalEntity (idGL ## GeneralLedger generalLedger) + = companyProp (object1 (generalLedger));
+    isPosted (idGL ## GeneralLedger generalLedger) + = isPosted (object1 (generalLedger));
+    descriptionProp (idGL ## GeneralLedger generalLedger) + = descriptionProp (object1 (generalLedger), object2 (generalLedger));
+    date (idGL ## GeneralLedger generalLedger) + = dateProp (object1 (generalLedger));
+    time (idGL ## GeneralLedger generalLedger) + = timeProp (object1 (generalLedger));
+    debit (idGL ## GeneralLedger generalLedger) + = GLAccountIdTypeIdGLAccount (accountType, debitV) IF generalLedger IS classGL ### generalLedger;
+    credit (idGL ## GeneralLedger generalLedger) + = GLAccountIdTypeIdGLAccount (accountType, creditV) IF generalLedger IS classGL ### generalLedger;
+    sum (idGL ## GeneralLedger generalLedger) + = property (object1 (generalLedger), object2 (generalLedger));
 END
 
-//-- С операцией
-META defineGeneralLedgerAggregationOperation(object1, object2, idGL, companyProp, property, descriptionProp, debitV, creditV, accountType, keyProp)
-    idGL###property(###object1 object1, ###object2 object2) = property(object1, object2) IF idOperation(object1) == keyProp;
-    @defineGeneralLedgerDoubleAggregation(object1, object2, idGL, companyProp, idGL###property, descriptionProp, debitV, creditV, accountType);
+// - With operation
+META defineGeneralLedgerAggregationOperation (object1, object2, idGL, companyProp, property, descriptionProp, debitV, creditV, accountType, keyProp)
+    idGL ### property (### object1 object1, ### object2 object2) = property (object1, object2) IF idOperation (object1) == keyProp;
+    @defineGeneralLedgerDoubleAggregation (object1, object2, idGL, companyProp, idGL ### property, descriptionProp, debitV, creditV, accountType);
 END
 
 
-// ----------------------------------- Стандартные данные ----------------------------------- //
+// ----------------------------------- Standard data ----------- ------------------------ //
 
 META defineLoadDefaultOperationPrefix (NSR, iname, isid, prefix)
-    loadDefault###prefix##Operation 'Добавить значение операций'(ISTRING[100] iname, ISTRING[100] isid)  { 
+    loadDefault ### prefix ## Operation 'Add value of operations' (ISTRING [100] iname, ISTRING [100] isid) {
         NEW t = NSR.Operation {
-            name(t) <- iname;
+            name (t) <- iname;
             id (t) <- isid;
         }
     }
 END
 META defineLoadDefaultOperation (NSR, iname, isid)
-    @defineLoadDefaultOperationPrefix (NSR, iname, isid, );
+    @defineLoadDefaultOperationPrefix (NSR, iname, isid,);
 END
 
 
-//loadDefaultOperations 'Загрузить стандартные операции для проводок' ()  ABSTRACT LIST ( )  IN loadDefault;
+// loadDefaultOperations 'Load standard operations for transactions' () ABSTRACT LIST () IN loadDefault;
 //
-//@implementLoadDefaultData(loadDefaultOperations){
-//    loadDefaultData () + {  loadDefaultOperations(); }
-//    EXTEND FORM defaultData
-//        PROPERTIES() loadDefaultOperations
-//    ;
-//    DESIGN defaultData {
-//        commons {
-//            MOVE PROPERTY(loadDefaultOperations());
-//        }
-//    }
+// @ implementLoadDefaultData (loadDefaultOperations) {
+// loadDefaultData () + {loadDefaultOperations (); }
+// EXTEND FORM defaultData
+// PROPERTIES () loadDefaultOperations
+//;
+// DESIGN defaultData {
+// commons {
+// MOVE PROPERTY (loadDefaultOperations ());
+//}
+//}
 //};
 
 //
 
 META extendFormGeneralLedgerDocument (form, filter, container)
-    EXTEND FORM form
-        OBJECTS g=GeneralLedger
-        PROPERTIES(g) READONLY description, idDebit, idDimensionsDebit, dimensionsDebit, 
-                                idCredit, idDimensionsCredit, dimensionsCredit, quantity, sum
+     EXTEND FORM form
+         OBJECTS g = GeneralLedger
+         PROPERTIES (g) READONLY description, idDebit, idDimensionsDebit, dimensionsDebit,
+                                 idCredit, idDimensionsCredit, dimensionsCredit, quantity, sum
     
-        FILTERS GLDocument(g) == filter
-    ;
+         FILTERS GLDocument (g) == filter
+     ;
     
-    DESIGN form {
-        container {
-            MOVE BOX(g) {
-                fill = 1;
-                caption = 'Проводки';
-            };
-        }
-    }
+     DESIGN form {
+         container {
+             MOVE BOX (g) {
+                 fill = 1;
+                 caption = 'Transactions';
+             };
+         }
+     }
 END
 META extendFormGeneralLedgerDocument (form, filter)
-    @extendFormGeneralLedgerDocument (form, filter, documentDetail);
+     @extendFormGeneralLedgerDocument (form, filter, documentDetail);
 END
 
-// ----------------------------------------------- Метакод по созданию проводок через ACTION -------------------------------------------- //
+// ----------------------------------------------- Metacode on creating transactions through ACTION -------------------------------------------- / /
 
-createGeneralLedgerFromTo   ABSTRACT LIST ( LegalEntity, DATE, DATE); 
+createGeneralLedgerFromTo ABSTRACT LIST (LegalEntity, DATE, DATE);
 
-onStarted()+ { 
-    FOR isCompany(LegalEntity l) DO {
-        unlock(l);
-    }    
+onStarted () + {
+     FOR isCompany (LegalEntity l) DO {
+         unlock (l);
+     }
 }
 
-createGeneralLedger 'Создать проводки' (LegalEntity legalEntity, DATE dFrom, DATE dTo)  { 
+createGeneralLedger 'Create transactions' (LegalEntity legalEntity, DATE dFrom, DATE dTo) {
     NEWSESSION {
-        lock(legalEntity);
-        IF lockResult() THEN {
+        lock (legalEntity);
+        IF lockResult () THEN {
             TRY {
-                DELETE UserGeneralLedger ud WHERE ud IS UserGeneralLedger AND date(ud) >= dFrom AND date(ud) <= dTo AND legalEntity(ud) == legalEntity;
+                DELETE UserGeneralLedger ud WHERE ud IS UserGeneralLedger AND date (ud)> = dFrom AND date (ud) <= dTo AND legalEntity (ud) == legalEntity;
                 APPLY;
-                createGeneralLedgerFromTo(legalEntity, dFrom, dTo);
+                createGeneralLedgerFromTo (legalEntity, dFrom, dTo);
                 APPLY;
             } FINALLY {
-                unlock(legalEntity);
+                unlock (legalEntity);
             }
         } ELSE {
-            MESSAGE 'Уже выполняется создание проводок для компании '+name(legalEntity)+'. Подождите...';    
-        }        
+            MESSAGE 'The transactions for the company' + name (legalEntity) + 'are already being created. Wait...';
+        }
     }
 } CONFIRM;
 
-createGeneralLedger(DATE dFrom, DATE dTo)  { 
-    FOR isCompany(LegalEntity l) DO 
-        createGeneralLedger(l, dFrom, dTo);
+createGeneralLedger (DATE dFrom, DATE dTo) {
+    FOR isCompany (LegalEntity l) DO
+        createGeneralLedger (l, dFrom, dTo);
 }
 
 EXTEND FORM generalLedgers
-    PROPERTIES(l, dFrom, dTo) createGeneralLedger 
+    PROPERTIES (l, dFrom, dTo) createGeneralLedger
 ;
 
-createGeneralLedger 'Создать проводки за отчетный период'(LegalEntity l)  { 
-    createGeneralLedger(l, dateReportingGeneralLedger(), maxDateGeneralLedger());
+createGeneralLedger 'Create transactions for reporting period' (LegalEntity l) {
+    createGeneralLedger (l, dateReportingGeneralLedger (), maxDateGeneralLedger ());
 } IN generalLedger;
 
-EXTEND FORM options 
-    PROPERTIES(lgl) createGeneralLedger
+EXTEND FORM options
+    PROPERTIES (lgl) createGeneralLedger
 ;
 
 DESIGN options {
     generalLedger {
-        MOVE PROPERTY(createGeneralLedger(lgl));
+        MOVE PROPERTY (createGeneralLedger (lgl));
     }
 }
 
-createGeneralLedger 'Создать проводки за отчетный период'()  { 
-    FOR isCompany(LegalEntity l) DO 
-        createGeneralLedger(l, dateReportingGeneralLedger(), maxDateGeneralLedger());
+createGeneralLedger 'Create transactions for reporting period' () {
+    FOR isCompany (LegalEntity l) DO
+        createGeneralLedger (l, dateReportingGeneralLedger (), maxDateGeneralLedger ());
 } IN generalLedger;
 
-countDaysClearGeneralLedger 'За сколько дней хранить пользовательские проводки' = DATA INTEGER (); 
+countDaysClearGeneralLedger 'How many days to keep custom transactions' = DATA INTEGER ();
 
-EXTEND FORM options PROPERTIES countDaysClearGeneralLedger();
-DESIGN options { log { MOVE PROPERTY(countDaysClearGeneralLedger());} } 
+EXTEND FORM options PROPERTIES countDaysClearGeneralLedger ();
+DESIGN options {log {MOVE PROPERTY (countDaysClearGeneralLedger ());}}
 
-clearApplicationLog () + { 
-	NEWSESSION {
-	    IF countDaysClearGeneralLedger() THEN {
+clearApplicationLog () + {
+NEWSESSION {
+IF countDaysClearGeneralLedger () THEN {
 
-	        DELETE UserGeneralLedger t WHERE  t IS UserGeneralLedger AND  date(t)<= subtract(currentDate(), countDaysClearGeneralLedger());
-	        APPLY;
-	    }
-	}
+DELETE UserGeneralLedger t WHERE t IS UserGeneralLedger AND date (t) <= subtract (currentDate (), countDaysClearGeneralLedger ());
+APPLY;
+}
+}
 }
 
-//-- Для одного объекта
+// - For one object
 
 META defineGeneralLedger (object, idGL, companyProp, property, dateProp, timeProp, descriptionProp, debitV, creditV, accountType)
-    overCreate###idGL###object  ABSTRACT LIST ( UserGeneralLedger);  
+    overCreate ### idGL ### object ABSTRACT LIST (UserGeneralLedger);
 
-    createUserGeneralLedgerALL###idGL###object##FromTo 'Создать проводки за период'(LegalEntity l, DATE dateProp, DATE dateProp##To)  {     
-        FOR property(###object object) AND dateProp(object) >= (date AS DATE) AND dateProp(object) <= (dateTo AS DATE) AND companyProp(object) == l NEW u = UserGeneralLedger DO  {
-            GLDocument(u) <- object;
-            legalEntity(u) <- companyProp(object);
-            isPosted(u) <- isPosted(object);
-            description(u) <- descriptionProp(object);
-            dateProp(u) <- dateProp(object);
-            timeProp(u) <- timeProp(object);
-            debit(u) <- GLAccountIdTypeIdGLAccount(accountType, debitV);
-            credit(u) <- GLAccountIdTypeIdGLAccount(accountType, creditV);
-            sum(u) <- NUMERIC[18,4](property(object));   
+    createUserGeneralLedgerALL ### idGL ### object ## FromTo 'Create transactions for the period' (LegalEntity l, DATE dateProp, DATE dateProp ## To) {
+        FOR property (### object object) AND dateProp (object)> = (date AS DATE) AND dateProp (object) <= (dateTo AS DATE) AND companyProp (object) == l NEW u = UserGeneralLedger DO {
+            GLDocument (u) <- object;
+            legalEntity (u) <- companyProp (object);
+            isPosted (u) <- isPosted (object);
+            description (u) <- descriptionProp (object);
+            dateProp (u) <- dateProp (object);
+            timeProp (u) <- timeProp (object);
+            debit (u) <- GLAccountIdTypeIdGLAccount (accountType, debitV);
+            credit (u) <- GLAccountIdTypeIdGLAccount (accountType, creditV);
+            sum (u) <- NUMERIC [18,4] (property (object));
             
-            EXEC overCreate###idGL###object(u); 
-        }    
+            EXEC overCreate ### idGL ### object (u);
+        }
     }
-    createGeneralLedgerFromTo(LegalEntity l, DATE date,DATE dateTo) + {  createUserGeneralLedgerALL###idGL###object##FromTo(l, date,dateTo); }
+    createGeneralLedgerFromTo (LegalEntity l, DATE date, DATE dateTo) + {createUserGeneralLedgerALL ### idGL ### object ## FromTo (l, date, dateTo); }
 END
-// дата 
+// date
 META defineGeneralLedger (object, idGL, companyProp, property, descriptionProp, debitV, creditV, accountType)
     @defineGeneralLedger (object, idGL, companyProp, property, date, time, descriptionProp, debitV, creditV, accountType);
 END
 
 
-//-- С операцией
-META defineGeneralLedgerOperation(object, idGL, companyProp, property, dateProp, timeProp, descriptionProp, debitV, creditV, accountType, keyProp)
-    idGL###property(###object object) = property(object) IF idOperation(object) == keyProp;
-    @defineGeneralLedger (object, idGL, companyProp, idGL###property, dateProp, timeProp, descriptionProp, debitV, creditV, accountType);            
+// - With operation
+META defineGeneralLedgerOperation (object, idGL, companyProp, property, dateProp, timeProp, descriptionProp, debitV, creditV, accountType, keyProp)
+    idGL ### property (### object object) = property (object) IF idOperation (object) == keyProp;
+    @defineGeneralLedger (object, idGL, companyProp, idGL ### property, dateProp, timeProp, descriptionProp, debitV, creditV, accountType);
 END
-// дата
-META defineGeneralLedgerOperation(object, idGL, companyProp, property, descriptionProp, debitV, creditV, accountType, keyProp)
-    @defineGeneralLedgerOperation(object, idGL, companyProp, property, date, time, descriptionProp, debitV, creditV, accountType, keyProp);
-END  
+// date
+META defineGeneralLedgerOperation (object, idGL, companyProp, property, descriptionProp, debitV, creditV, accountType, keyProp)
+    @defineGeneralLedgerOperation (object, idGL, companyProp, property, date, time, descriptionProp, debitV, creditV, accountType, keyProp);
+END
 
-//-- 2 операции
-META defineGeneralLedgerOperation(object, idGL, companyProp, property, dateProp, timeProp, descriptionProp, debitV, creditV, accountType, keyProp, key1Prop)
-    idGL###property(###object object) = property(object) IF idOperation(object) == keyProp OR idOperation(object) == key1Prop;
-    @defineGeneralLedger (object, idGL, companyProp, idGL###property, dateProp, timeProp, descriptionProp, debitV, creditV, accountType);            
+// - 2 operations
+META defineGeneralLedgerOperation (object, idGL, companyProp, property, dateProp, timeProp, descriptionProp, debitV, creditV, accountType, keyProp, key1Prop)
+    idGL ### property (### object object) = property (object) IF idOperation (object) == keyProp OR idOperation (object) == key1Prop;
+    @defineGeneralLedger (object, idGL, companyProp, idGL ### property, dateProp, timeProp, descriptionProp, debitV, creditV, accountType);
 END
-// дата
-META defineGeneralLedgerOperation(object, idGL, companyProp, property, descriptionProp, debitV, creditV, accountType, keyProp, key1Prop)
-    @defineGeneralLedgerOperation(object, idGL, companyProp, property, date, time, descriptionProp, debitV, creditV, accountType, keyProp, key1Prop);
-END  
- 
+// date
+META defineGeneralLedgerOperation (object, idGL, companyProp, property, descriptionProp, debitV, creditV, accountType, keyProp, key1Prop)
+    @defineGeneralLedgerOperation (object, idGL, companyProp, property, date, time, descriptionProp, debitV, creditV, accountType, keyProp, key1Prop);
+END
   
-// ----------------------------------- Для двух объектов (object1 - документ) --------------------------------------- //
+// ----------------------------------- For two objects (object1 - document) ----- ---------------------------------- //
 
 META defineGeneralLedgerDouble (object1, object2, idGL, companyProp, property, dateProp, timeProp, descriptionProp, debitV, creditV, accountType)
 
-    overCreate##idGL###object1###object2  ABSTRACT LIST ( UserGeneralLedger);  
-    overCreate##idGL###object1###object2  ABSTRACT LIST ( UserGeneralLedger, Dimension);  
+    overCreate ## idGL ### object1 ### object2 ABSTRACT LIST (UserGeneralLedger);
+    overCreate ## idGL ### object1 ### object2 ABSTRACT LIST (UserGeneralLedger, Dimension);
     
-    createUserGeneralLedgerALL##idGL###object1###object2##FromTo 'Создать проводки'(LegalEntity l, DATE dateProp,DATE dateProp##To)  {     
-        FOR property(###object1 object1, ###object2 object2) AND dateProp(object1) >= (date AS DATE) AND dateProp(object1) <= (dateTo AS DATE) AND companyProp(object1) == l NEW u = UserGeneralLedger DO  {
-            GLDocument(u) <- object1;
-            legalEntity(u) <- companyProp(object1);
-            isPosted(u) <- isPosted(object1);
-            descriptionProp(u) <- descriptionProp(object1, object2);
-            dateProp(u) <- dateProp(object1);
-            timeProp(u) <- timeProp(object1);
-            debit(u) <- GLAccountIdTypeIdGLAccount(accountType, debitV);
-            credit(u) <- GLAccountIdTypeIdGLAccount(accountType, creditV);
-            sum(u) <- NUMERIC[18,4](property(object1, object2));   
+    createUserGeneralLedgerALL ## idGL ### object1 ### object2 ## FromTo 'Create transactions' (LegalEntity l, DATE dateProp, DATE dateProp ## To) {
+        FOR property (### object1 object1, ### object2 object2) AND dateProp (object1)> = (date AS DATE) AND dateProp (object1) <= (dateTo AS DATE) AND companyProp (object1) == l NEW u = UserGeneralLedger DO {
+            GLDocument (u) <- object1;
+            legalEntity (u) <- companyProp (object1);
+            isPosted (u) <- isPosted (object1);
+            descriptionProp (u) <- descriptionProp (object1, object2);
+            dateProp (u) <- dateProp (object1);
+            timeProp (u) <- timeProp (object1);
+            debit (u) <- GLAccountIdTypeIdGLAccount (accountType, debitV);
+            credit (u) <- GLAccountIdTypeIdGLAccount (accountType, creditV);
+            sum (u) <- NUMERIC [18,4] (property (object1, object2));
             
-            overCreate##idGL###object1###object2(u,object2);
-            overCreate##idGL###object1###object2(u); 
-        }    
+            overCreate ## idGL ### object1 ### object2 (u, object2);
+            overCreate ## idGL ### object1 ### object2 (u);
+        }
     }
-    createGeneralLedgerFromTo(LegalEntity l, DATE date,DATE dateTo) + {  createUserGeneralLedgerALL##idGL###object1###object2##FromTo(l, date, dateTo); }
+    createGeneralLedgerFromTo (LegalEntity l, DATE date, DATE dateTo) + {createUserGeneralLedgerALL ## idGL ### object1 ### object2 ## FromTo (l, date, dateTo); }
 END
-// дата 
+// date
 META defineGeneralLedgerDouble (object1, object2, idGL, companyProp, property, descriptionProp, debitV, creditV, accountType)
     @defineGeneralLedgerDouble (object1, object2, idGL, companyProp, property, date, time, descriptionProp, debitV, creditV, accountType);
 END
 
-//-- С операцией
-META defineGeneralLedgerDoubleOperation(object1, object2, idGL, companyProp, property, dateProp, timeProp, descriptionProp, debitV, creditV, accountType, keyProp)
-    idGL###property(###object1 object1, ###object2 object2) = property(object1, object2) IF id###operation(object1) == keyProp;
-    @defineGeneralLedgerDouble (object1, object2, idGL, companyProp, idGL###property, dateProp, timeProp, descriptionProp, debitV, creditV, accountType);
-END  
-// дата 
-META defineGeneralLedgerDoubleOperation(object1, object2, idGL, companyProp, property, descriptionProp, debitV, creditV, accountType, keyProp)
-    @defineGeneralLedgerDoubleOperation(object1, object2, idGL, companyProp, property, date, time, descriptionProp, debitV, creditV, accountType, keyProp);
+// - With operation
+META defineGeneralLedgerDoubleOperation (object1, object2, idGL, companyProp, property, dateProp, timeProp, descriptionProp, debitV, creditV, accountType, keyProp)
+    idGL ### property (### object1 object1, ### object2 object2) = property (object1, object2) IF id ### operation (object1) == keyProp;
+    @defineGeneralLedgerDouble (object1, object2, idGL, companyProp, idGL ### property, dateProp, timeProp, descriptionProp, debitV, creditV, accountType);
+END
+// date
+META defineGeneralLedgerDoubleOperation (object1, object2, idGL, companyProp, property, descriptionProp, debitV, creditV, accountType, keyProp)
+    @defineGeneralLedgerDoubleOperation (object1, object2, idGL, companyProp, property, date, time, descriptionProp, debitV, creditV, accountType, keyProp);
 END
 
-//-- 2 операции
-META defineGeneralLedgerDoubleOperation(object1, object2, idGL, companyProp, property, dateProp, timeProp, descriptionProp, debitV, creditV, accountType, keyProp, key1Prop)
-    idGL###property(###object1 object1, ###object2 object2) = property(object1, object2) IF id###operation(object1) == keyProp OR id###operation(object1) == key1Prop;
-    @defineGeneralLedgerDouble (object1, object2, idGL, companyProp, idGL###property, dateProp, timeProp, descriptionProp, debitV, creditV, accountType);
-END  
-// дата 
-META defineGeneralLedgerDoubleOperation(object1, object2, idGL, companyProp, property, descriptionProp, debitV, creditV, accountType, keyProp, key1Prop)
-    @defineGeneralLedgerDoubleOperation(object1, object2, idGL, companyProp, property, date, time, descriptionProp, debitV, creditV, accountType, keyProp, key1Prop);
+// - 2 operations
+META defineGeneralLedgerDoubleOperation (object1, object2, idGL, companyProp, property, dateProp, timeProp, descriptionProp, debitV, creditV, accountType, keyProp, key1Prop)
+    idGL ### property (### object1 object1, ### object2 object2) = property (object1, object2) IF id ### operation (object1) == keyProp OR id ### operation (object1) == key1Prop;
+    @defineGeneralLedgerDouble (object1, object2, idGL, companyProp, idGL ### property, dateProp, timeProp, descriptionProp, debitV, creditV, accountType);
+END
+// date
+META defineGeneralLedgerDoubleOperation (object1, object2, idGL, companyProp, property, descriptionProp, debitV, creditV, accountType, keyProp, key1Prop)
+    @defineGeneralLedgerDoubleOperation (object1, object2, idGL, companyProp, property, date, time, descriptionProp, debitV, creditV, accountType, keyProp, key1Prop);
 END
