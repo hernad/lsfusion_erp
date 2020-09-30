@@ -4,62 +4,62 @@ REQUIRE LegalEntity;
 
 NAMESPACE LegalEntity;
 
-// ----------------------------------- Стандартные данные ----------------------------------- //
+// ----------------------------------- Standard data ----------- ------------------------ //
 
-loadDefaultStaticOwnership 'Добавить Формы собственности'(ISTRING[100] iname, BPSTRING[10] isname, BPSTRING[3] sidCountry, static)  {    //статик класс
-    name(Ownership t) <- iname WHERE t == static;
-    shortName(Ownership t) <- isname WHERE t == static;       
-    country(Ownership t) <- country(sidCountry) WHERE t == static;
+loadDefaultStaticOwnership 'Add Property Forms' (ISTRING [100] iname, BPSTRING [10] isname, BPSTRING [3] sidCountry, static) {// static class
+    name (Ownership t) <- iname WHERE t == static;
+    shortName (Ownership t) <- isname WHERE t == static;
+    country (Ownership t) <- country (sidCountry) WHERE t == static;
 }
 
-loadDefaultOwnership 'Добавить Формы собственности'(ISTRING[100] iname, BPSTRING[10] isname, BPSTRING[3] sidCountry)  { 
+loadDefaultOwnership 'Add Ownership Forms' (ISTRING [100] iname, BPSTRING [10] isname, BPSTRING [3] sidCountry) {
     NEW t = Ownership {
-        name(t) <- iname;
-        shortName(t) <- isname;
-        country(t) <- country(sidCountry);
+        name (t) <- iname;
+        shortName (t) <- isname;
+        country (t) <- country (sidCountry);
     }
 }
 
-overLoadDefaultOwnerships ()  ABSTRACT LIST ( );
+overLoadDefaultOwnerships () ABSTRACT LIST ();
 
-loadDefaultOwnerships 'Загрузить стандартные формы собственности' ()  ABSTRACT LIST ( ) IN loadDefault;
+loadDefaultOwnerships 'Load standard property forms' () ABSTRACT LIST () IN loadDefault;
 
-@implementLoadDefaultData(loadDefaultOwnerships);
+@implementLoadDefaultData (loadDefaultOwnerships);
 
-//--
+// -
 
-loadDefaultLegalEntityGroup 'Добавить группы организаций'(ISTRING[100] iname, STRING[100] id)  { 
+loadDefaultLegalEntityGroup 'Add organization groups' (ISTRING [100] iname, STRING [100] id) {
     NEW lg = LegalEntityGroup {
-        name(lg) <- iname;
-        id(lg) <- id;
+        name (lg) <- iname;
+        id (lg) <- id;
 
     }
 }
-loadDefaultRecLegalEntityGroup 'Добавить группы организаций (рекурсивно)'(ISTRING[100] iname, STRING[100] id, STRING[100] idParent)  { 
+loadDefaultRecLegalEntityGroup 'Add organization groups (recursively)' (ISTRING [100] iname, STRING [100] id, STRING [100] idParent) {
     NEW lg = LegalEntityGroup {
-        name(lg) <- iname;
-        id(lg) <- id;
-        parent(lg) <- legalEntityGroup(idParent);
+        name (lg) <- iname;
+        id (lg) <- id;
+        parent (lg) <- legalEntityGroup (idParent);
     }
 }
 
-loadDefaultLegalEntityGroups 'Загрузить стандартные группы организаций' ()  ABSTRACT LIST ( ) IN loadDefault;
+loadDefaultLegalEntityGroups 'Load standard organization groups' () ABSTRACT LIST () IN loadDefault;
 
-@implementLoadDefaultData(loadDefaultLegalEntityGroups);
+@implementLoadDefaultData (loadDefaultLegalEntityGroups);
 
-loadDefaultLegalEntityGroups () + { 
-    loadDefaultLegalEntityGroup ('Все', 'all');
-    loadDefaultRecLegalEntityGroup ('Поставщики', 'suppliers', 'all');
-    loadDefaultRecLegalEntityGroup ('Покупатели', 'customers', 'all');
-    loadDefaultRecLegalEntityGroup ('Компании', 'companies', 'all');
+loadDefaultLegalEntityGroups () + {
+    loadDefaultLegalEntityGroup ('All', 'all');
+    loadDefaultRecLegalEntityGroup ('Suppliers', 'suppliers', 'all');
+    loadDefaultRecLegalEntityGroup ('Customers', 'customers', 'all');
+    loadDefaultRecLegalEntityGroup ('Companies', 'companies', 'all');
     
     NEW l = LegalEntity {
-        name(l) <- 'Моя организация';
-        id(l) <- 'company';
-        legalEntityGroup(l) <- legalEntityGroup('companies');
+        name (l) <- 'My organization';
+        id (l) <- 'company';
+        legalEntityGroup (l) <- legalEntityGroup ('companies');
         
-        isSupplier(l) <- TRUE;
-        isCompany(l) <- TRUE;
-        isCustomer(l) <- TRUE;
+        isSupplier (l) <- TRUE;
+        isCompany (l) <- TRUE;
+        isCustomer (l) <- TRUE;
     }
 }
