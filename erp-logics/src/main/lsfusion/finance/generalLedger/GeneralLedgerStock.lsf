@@ -5,55 +5,56 @@ REQUIRE GeneralLedger, Stock, EmployeeStock;
 NAMESPACE GeneralLedger;
 
 stock = ABSTRACT Stock (GeneralLedger) MATERIALIZED INDEXED;
-nameStock 'Склад' (GeneralLedger generalLedger) = name(stock(generalLedger));
-idStock 'Склад' (GeneralLedger generalLedger) = id(stock(generalLedger));
+nameStock 'Stock' (GeneralLedger generalLedger) = name (stock (generalLedger));
+idStock 'Warehouse' (GeneralLedger generalLedger) = id (stock (generalLedger));
 stock = DATA Stock (UserGeneralLedger);
-nameStock 'Склад' (UserGeneralLedger userGeneralLedger) = name(stock(userGeneralLedger));
-idStock 'Склад' (UserGeneralLedger generalLedger) = id(stock(generalLedger));
-stock (UserGeneralLedger generalLedger) += stock (generalLedger);
+nameStock 'Stock' (UserGeneralLedger userGeneralLedger) = name (stock (userGeneralLedger));
+idStock 'Stock' (UserGeneralLedger generalLedger) = id (stock (generalLedger));
+stock (UserGeneralLedger generalLedger) + = stock (generalLedger);
 
 EXTEND FORM userGeneralLedger
-    PROPERTIES(g) nameStock
+    PROPERTIES (g) nameStock
 ;
 
 DESIGN userGeneralLedger {
-    GROUP(documentHeader,g) {
-        MOVE PROPERTY(nameStock(g)) AFTER PROPERTY(nameLegalEntity(g));
-    }    
-}
-
-selectGLStock 'Отм.' = DATA LOCAL NESTED BOOLEAN (Stock);
-countSelectGLStock = GROUP SUM 1 IF selectGLStock(Stock st);
-minSelectGLStock = GROUP MIN Stock st IF selectGLStock(st);
-nameSelectGLStock 'Склады'  = GROUP CONCAT name(Stock st) IF selectGLStock(st), ', ' CHARWIDTH 30;
-
-notResetStock() = DATA LOCAL BOOLEAN ();   
-resetSelectGLStock ()  { 
-    IF NOT notResetStock() THEN{
-        selectGLStock(Stock st) <- NULL;  
+    GROUP (documentHeader, g) {
+        MOVE PROPERTY (nameStock (g)) AFTER PROPERTY (nameLegalEntity (g));
     }
-    notResetStock() <- NULL;  
 }
 
-FORM companyStocksEx 'Склады'
+selectGLStock 'Cancel' = DATA LOCAL NESTED BOOLEAN (Stock);
+countSelectGLStock = GROUP SUM 1 IF selectGLStock (Stock st);
+minSelectGLStock = GROUP MIN Stock st IF selectGLStock (st);
+nameSelectGLStock 'Warehouses' = GROUP CONCAT name (Stock st) IF selectGLStock (st), ',' CHARWIDTH 30;
+
+notResetStock () = DATA LOCAL BOOLEAN ();
+resetSelectGLStock () {
+    IF NOT notResetStock () THEN {
+        selectGLStock (Stock st) <- NULL;
+    }
+    notResetStock () <- NULL;
+}
+
+
+FORM companyStocksEx 'Warehouses'
     OBJECTS l = LegalEntity PANEL
 
-    TREE stockTree a = BPSTRING[3], sg = StockGroup PARENT parent(sg)
-    PROPERTIES READONLY VALUE(a), sgTreeName = name(sg)
+    TREE stockTree a = BPSTRING [3], sg = StockGroup PARENT parent (sg)
+    PROPERTIES READONLY VALUE (a), sgTreeName = name (sg)
     ORDERS sgTreeName
-    FILTERS stringEqualsAll(a)
+    FILTERS stringEqualsAll (a)
 
     OBJECTS s = Stock
     PROPERTIES (s) selectGLStock
-    PROPERTIES(s) READONLY id, stockName = name, nameLegalEntity, nameCountry, address
+    PROPERTIES (s) READONLY id, stockName = name, nameLegalEntity, nameCountry, address
     ORDERS stockName
-    FILTERS isParent(sg, s) OR (s IS Stock AND NOT sg),
-            in(l,s),
-            isCompany(s)
-    FILTERGROUP inactiveStock FILTER 'Активный' active(s) 'F5' DEFAULT   
-    FILTERGROUP select FILTER 'Отмеченные' selectGLStock(s) 'F10' 
+    FILTERS isParent (sg, s) OR (s IS Stock AND NOT sg),
+            in (l, s),
+            isCompany (s)
+    FILTERGROUP inactiveStock FILTER 'Active' active (s) 'F5' DEFAULT
+    FILTERGROUP select FILTER 'Checked' selectGLStock (s) 'F10'
     
-    EVENTS ON DROP resetSelectGLStock()         
+    EVENTS ON DROP resetSelectGLStock ()
 ;
 
 DESIGN companyStocksEx {
@@ -64,13 +65,13 @@ DESIGN companyStocksEx {
             type = SPLITH;
             fill = 1;
 
-            MOVE BOX(TREE stockTree) {
-                caption = 'Склады';
+            MOVE BOX (TREE stockTree) {
+                caption = 'Warehouses';
             }
 
-            MOVE BOX(s) {
+            MOVE BOX (s) {
                 fill = 3;
-                GRID(s) {
+                GRID (s) {
                     defaultComponent = TRUE;
                 }
             }
@@ -79,126 +80,122 @@ DESIGN companyStocksEx {
         MOVE TOOLBARBOX;
     }
 }
-@extendFormFilterStockGroupAccess(sg, companyStocksEx, company);
-@extendFormFilterStockAccess(s, companyStocksEx, company);
+@extendFormFilterStockGroupAccess (sg, companyStocksEx, company);
+@extendFormFilterStockAccess (s, companyStocksEx, company);
 
-changeSelectGLStock (LegalEntity l)  { 
+changeSelectGLStock (LegalEntity l) {
     DIALOG companyStocksEx OBJECTS l = l, s INPUT NULL DO {
-        IF NOT countSelectGLStock() THEN {
-            selectGLStock(s) <- TRUE;
+        IF NOT countSelectGLStock () THEN {
+            selectGLStock (s) <- TRUE;
         }
     }
 }
-EXTEND FORM generalLedgers 
-    EVENTS ON CHANGE l resetSelectGLStock()       
+EXTEND FORM generalLedgers
+    EVENTS ON CHANGE l resetSelectGLStock ()
 ;
 
-EXTEND FORM generalLedgers 
-    PROPERTIES nameSelectGLStock() DRAW dates ON CHANGE changeSelectGLStock(l)
-    PROPERTIES(g)  READONLY nameStock AFTER nameLegalEntity(g)
+EXTEND FORM generalLedgers
+    PROPERTIES nameSelectGLStock () DRAW dates ON CHANGE changeSelectGLStock (l)
+    PROPERTIES (g) READONLY nameStock AFTER nameLegalEntity (g)
     
-    FILTERS selectGLStock(stock(g)) OR (NOT countSelectGLStock() AND g IS GeneralLedger)  
+    FILTERS selectGLStock (stock (g)) OR (NOT countSelectGLStock () AND g IS GeneralLedger)
 ;
 
-@extendFormFilterAccessStock(generalLedger, g, generalLedgers, stock, company);
+@extendFormFilterAccessStock (generalLedger, g, generalLedgers, stock, company);
 
-//////////////////////////////////---- Для склада ----//////////////////////////
-//-- Для одного объекта
+////////////////////////////////// ---- For warehouse ---- ////// ////////////////////
+// - For one object
 
 META defineGeneralLedgerStock (object, idGL, companyProp, stockProp, property, dateProp, timeProp, descriptionProp, debitV, creditV, accountType)
-    overCreate###idGL###object  ABSTRACT LIST ( UserGeneralLedger, ###object);  
+    overCreate ### idGL ### object ABSTRACT LIST (UserGeneralLedger, ### object);
 
-    createUserGeneralLedgerALL###idGL###object##FromTo 'Создать проводки за период'(LegalEntity l, DATE dateProp, DATE dateProp##To)  {     
-        FOR property(###object object) AND dateProp(object) >= (date AS DATE) AND dateProp(object) < (sum(dateTo AS DATE, 1)) AND companyProp(object) == l NEW u = UserGeneralLedger DO  {
-            GLDocument(u) <- object;
-            legalEntity(u) <- companyProp(object);
-            stock(u) <- stockProp(object);
-            isPosted(u) <- isPosted(object);
-            description(u) <- descriptionProp(object);
-            dateProp(u) <- dateProp(object);
-            timeProp(u) <- timeProp(object);
-            debit(u) <- GLAccountIdTypeIdGLAccount(accountType, debitV);
-            credit(u) <- GLAccountIdTypeIdGLAccount(accountType, creditV);
-            sum(u) <- NUMERIC[18,4](property(object));   
+    createUserGeneralLedgerALL ### idGL ### object ## FromTo 'Create transactions for the period' (LegalEntity l, DATE dateProp, DATE dateProp ## To) {
+        FOR property (### object object) AND dateProp (object)> = (date AS DATE) AND dateProp (object) <(sum (dateTo AS DATE, 1)) AND companyProp (object) == l NEW u = UserGeneralLedger DO {
+            GLDocument (u) <- object;
+            legalEntity (u) <- companyProp (object);
+            stock (u) <- stockProp (object);
+            isPosted (u) <- isPosted (object);
+            description (u) <- descriptionProp (object);
+            dateProp (u) <- dateProp (object);
+            timeProp (u) <- timeProp (object);
+            debit (u) <- GLAccountIdTypeIdGLAccount (accountType, debitV);
+            credit (u) <- GLAccountIdTypeIdGLAccount (accountType, creditV);
+            sum (u) <- NUMERIC [18,4] (property (object));
             
-            EXEC overCreate###idGL###object(u, object); 
-        }    
+            EXEC overCreate ### idGL ### object (u, object);
+        }
     }
-    createGeneralLedgerFromTo(LegalEntity l, DATE date,DATE dateTo) + {  createUserGeneralLedgerALL###idGL###object##FromTo(l, date,dateTo); }
+    createGeneralLedgerFromTo (LegalEntity l, DATE date, DATE dateTo) + {createUserGeneralLedgerALL ### idGL ### object ## FromTo (l, date, dateTo); }
 END
-// дата 
+// date
 META defineGeneralLedgerStock (object, idGL, companyProp, stockProp, property, descriptionProp, debitV, creditV, accountType)
     @defineGeneralLedgerStock (object, idGL, companyProp, stockProp, property, date, time, descriptionProp, debitV, creditV, accountType);
 END
 
 
-//-- С операцией
-META defineGeneralLedgerOperationStock(object, idGL, companyProp, stockProp, property, dateProp, timeProp, descriptionProp, debitV, creditV, accountType, keyProp)
-    idGL###property(###object object) = property(object) IF idOperation(object) == keyProp;
-    @defineGeneralLedgerStock (object, idGL, companyProp, stockProp, idGL###property, dateProp, timeProp, descriptionProp, debitV, creditV, accountType);            
+// - With operation
+META defineGeneralLedgerOperationStock (object, idGL, companyProp, stockProp, property, dateProp, timeProp, descriptionProp, debitV, creditV, accountType, keyProp)
+    idGL ### property (### object object) = property (object) IF idOperation (object) == keyProp;
+    @defineGeneralLedgerStock (object, idGL, companyProp, stockProp, idGL ### property, dateProp, timeProp, descriptionProp, debitV, creditV, accountType);
 END
-// дата
-META defineGeneralLedgerOperationStock(object, idGL, companyProp, stockProp, property, descriptionProp, debitV, creditV, accountType, keyProp)
-    @defineGeneralLedgerOperationStock(object, idGL, companyProp, stockProp, property, date, time, descriptionProp, debitV, creditV, accountType, keyProp);
-END  
-
-//-- 2 операции
-META defineGeneralLedgerOperationStock(object, idGL, companyProp, stockProp, property, dateProp, timeProp, descriptionProp, debitV, creditV, accountType, keyProp, key1Prop)
-    idGL###property(###object object) = property(object) IF idOperation(object) == keyProp OR idOperation(object) == key1Prop;
-    @defineGeneralLedgerStock (object, idGL, companyProp, stockProp, idGL###property, dateProp, timeProp, descriptionProp, debitV, creditV, accountType);            
+// date
+META defineGeneralLedgerOperationStock (object, idGL, companyProp, stockProp, property, descriptionProp, debitV, creditV, accountType, keyProp)
+    @defineGeneralLedgerOperationStock (object, idGL, companyProp, stockProp, property, date, time, descriptionProp, debitV, creditV, accountType, keyProp);
 END
-// дата
-META defineGeneralLedgerOperationStock(object, idGL, companyProp, stockProp, property, descriptionProp, debitV, creditV, accountType, keyProp, key1Prop)
-    @defineGeneralLedgerOperationStock(object, idGL, companyProp, stockProp, property, date, time, descriptionProp, debitV, creditV, accountType, keyProp, key1Prop);
-END  
 
-// ----------------------------------- Для двух объектов (object1 - документ) --------------------------------------- //
+// - 2 operations
+META defineGeneralLedgerOperationStock (object, idGL, companyProp, stockProp, property, dateProp, timeProp, descriptionProp, debitV, creditV, accountType, keyProp, key1Prop)
+    idGL ### property (### object object) = property (object) IF idOperation (object) == keyProp OR idOperation (object) == key1Prop;
+    @defineGeneralLedgerStock (object, idGL, companyProp, stockProp, idGL ### property, dateProp, timeProp, descriptionProp, debitV, creditV, accountType);
+END
+// date
+META defineGeneralLedgerOperationStock (object, idGL, companyProp, stockProp, property, descriptionProp, debitV, creditV, accountType, keyProp, key1Prop)
+    @defineGeneralLedgerOperationStock (object, idGL, companyProp, stockProp, property, date, time, descriptionProp, debitV, creditV, accountType, keyProp, key1Prop);
+END
+
+// ----------------------------------- For two objects (object1 - document) ----- ---------------------------------- //
 
 META defineGeneralLedgerDoubleStock (object1, object2, idGL, companyProp, stockProp, property, dateProp, timeProp, descriptionProp, debitV, creditV, accountType)
 
-    overCreate##idGL###object1###object2  ABSTRACT LIST ( UserGeneralLedger, ###object1);  
-    overCreate##idGL###object1###object2  ABSTRACT LIST ( UserGeneralLedger, Dimension, ###object1);  
+    overCreate ## idGL ### object1 ### object2 ABSTRACT LIST (UserGeneralLedger, ### object1);
+    overCreate ## idGL ### object1 ### object2 ABSTRACT LIST (UserGeneralLedger, Dimension, ### object1);
     
-    createUserGeneralLedgerALL##idGL###object1###object2##FromTo 'Создать проводки'(LegalEntity l, DATE dateProp,DATE dateProp##To)  {     
-        FOR property(###object1 object1, ###object2 object2) AND dateProp(object1) >= (date AS DATE) AND dateProp(object1) < (sum(dateTo AS DATE, 1)) AND companyProp(object1) == l NEW u = UserGeneralLedger DO  {
-            GLDocument(u) <- object1;
-            legalEntity(u) <- companyProp(object1);
-            stock(u) <- stockProp(object1);
-            isPosted(u) <- isPosted(object1);
-            descriptionProp(u) <- descriptionProp(object1, object2);
-            dateProp(u) <- dateProp(object1);
-            timeProp(u) <- timeProp(object1);
-            debit(u) <- GLAccountIdTypeIdGLAccount(accountType, debitV);
-            credit(u) <- GLAccountIdTypeIdGLAccount(accountType, creditV);
-            sum(u) <- NUMERIC[18,4](property(object1, object2));   
+    createUserGeneralLedgerALL ## idGL ### object1 ### object2 ## FromTo 'Create transactions' (LegalEntity l, DATE dateProp, DATE dateProp ## To) {
+        FOR property (### object1 object1, ### object2 object2) AND dateProp (object1)> = (date AS DATE) AND dateProp (object1) <(sum (dateTo AS DATE, 1)) AND companyProp (object1) == l NEW u = UserGeneralLedger DO {
+            GLDocument (u) <- object1;
+            legalEntity (u) <- companyProp (object1);
+            stock (u) <- stockProp (object1);
+            isPosted (u) <- isPosted (object1);
+            descriptionProp (u) <- descriptionProp (object1, object2);
+            dateProp (u) <- dateProp (object1);
+            timeProp (u) <- timeProp (object1);
+            debit (u) <- GLAccountIdTypeIdGLAccount (accountType, debitV);
+            credit (u) <- GLAccountIdTypeIdGLAccount (accountType, creditV);
+            sum (u) <- NUMERIC [18,4] (property (object1, object2));
             
-            overCreate##idGL###object1###object2(u, object2, object1);
-            overCreate##idGL###object1###object2(u, object1); 
-        }    
+            overCreate ## idGL ### object1 ### object2 (u, object2, object1);
+            overCreate ## idGL ### object1 ### object2 (u, object1);
+        }
     }
-    createGeneralLedgerFromTo(LegalEntity l, DATE date,DATE dateTo) + {  createUserGeneralLedgerALL##idGL###object1###object2##FromTo(l, date, dateTo); }
-END
-// дата 
-META defineGeneralLedgerDoubleStock (object1, object2, idGL, companyProp, stockProp, property, descriptionProp, debitV, creditV, accountType)
-    @defineGeneralLedgerDoubleStock (object1, object2, idGL, companyProp, stockProp, property, date, time, descriptionProp, debitV, creditV, accountType);
+    createGeneralLedgerFromTo (LegalEntity l, DATE date, DATE dateTo) + {createUserGeneralLedgerALL ## idGL ### object1 ### object2 ## FromTo (l, date, dateTo); }
 END
 
-//-- С операцией
-META defineGeneralLedgerDoubleOperationStock(object1, object2, idGL, companyProp, stockProp, property, dateProp, timeProp, descriptionProp, debitV, creditV, accountType, keyProp)
-    idGL###property(###object1 object1, ###object2 object2) = property(object1, object2) IF id###operation(object1) == keyProp;
-    @defineGeneralLedgerDoubleStock (object1, object2, idGL, companyProp, stockProp, idGL###property, dateProp, timeProp, descriptionProp, debitV, creditV, accountType);
-END  
-// дата 
-META defineGeneralLedgerDoubleOperationStock(object1, object2, idGL, companyProp, stockProp, property, descriptionProp, debitV, creditV, accountType, keyProp)
-    @defineGeneralLedgerDoubleOperationStock(object1, object2, idGL, companyProp, stockProp, property, date, time, descriptionProp, debitV, creditV, accountType, keyProp);
+// - With operation
+META defineGeneralLedgerDoubleOperationStock (object1, object2, idGL, companyProp, stockProp, property, dateProp, timeProp, descriptionProp, debitV, creditV, accountType, keyProp)
+    idGL ### property (### object1 object1, ### object2 object2) = property (object1, object2) IF id ### operation (object1) == keyProp;
+    @defineGeneralLedgerDoubleStock (object1, object2, idGL, companyProp, stockProp, idGL ### property, dateProp, timeProp, descriptionProp, debitV, creditV, accountType);
+END
+// date
+META defineGeneralLedgerDoubleOperationStock (object1, object2, idGL, companyProp, stockProp, property, descriptionProp, debitV, creditV, accountType, keyProp)
+    @defineGeneralLedgerDoubleOperationStock (object1, object2, idGL, companyProp, stockProp, property, date, time, descriptionProp, debitV, creditV, accountType, keyProp);
 END
 
-//-- 2 операции
-META defineGeneralLedgerDoubleOperationStock(object1, object2, idGL, companyProp, stockProp, property, dateProp, timeProp, descriptionProp, debitV, creditV, accountType, keyProp, key1Prop)
-    idGL###property(###object1 object1, ###object2 object2) = property(object1, object2) IF id###operation(object1) == keyProp OR id###operation(object1) == key1Prop;
-    @defineGeneralLedgerDoubleStock (object1, object2, idGL, companyProp, stockProp, idGL###property, dateProp, timeProp, descriptionProp, debitV, creditV, accountType);
-END  
-// дата 
-META defineGeneralLedgerDoubleOperationStock(object1, object2, idGL, companyProp, stockProp, property, descriptionProp, debitV, creditV, accountType, keyProp, key1Prop)
-    @defineGeneralLedgerDoubleOperationStock(object1, object2, idGL, companyProp, stockProp, property, date, time, descriptionProp, debitV, creditV, accountType, keyProp, key1Prop);
+// - 2 operations
+META defineGeneralLedgerDoubleOperationStock (object1, object2, idGL, companyProp, stockProp, property, dateProp, timeProp, descriptionProp, debitV, creditV, accountType, keyProp, key1Prop)
+    idGL ### property (### object1 object1, ### object2 object2) = property (object1, object2) IF id ### operation (object1) == keyProp OR id ### operation (object1) == key1Prop;
+    @defineGeneralLedgerDoubleStock (object1, object2, idGL, companyProp, stockProp, idGL ### property, dateProp, timeProp, descriptionProp, debitV, creditV, accountType);
+END
+// date
+META defineGeneralLedgerDoubleOperationStock (object1, object2, idGL, companyProp, stockProp, property, descriptionProp, debitV, creditV, accountType, keyProp, key1Prop)
+    @defineGeneralLedgerDoubleOperationStock (object1, object2, idGL, companyProp, stockProp, property, date, time, descriptionProp, debitV, creditV, accountType, keyProp, key1Prop);
 END
