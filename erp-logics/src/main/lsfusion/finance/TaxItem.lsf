@@ -4,116 +4,117 @@ REQUIRE System, Historizable, Item, StockTax;
 
 NAMESPACE Item;
 
-//------------------------- НДС -------------------------//
+// ------------------------- VAT ---------------------- --- //
 
-VAT 'НДС' = DATA Range (Item, Country);
-numberVAT 'НДС, номер' (Item i, Country c) = number(VAT(i, c));
+VAT 'VAT' = DATA Range (Item, Country);
+numberVAT 'VAT, number' (Item i, Country c) = number (VAT (i, c));
 
-VAT (Item item, Country country) += VAT (item, country);
+VAT (Item item, Country country) + = VAT (item, country);
 
-CONSTRAINT tax(VAT(Item item, Country country)) != Tax.taxVAT OR
-           country(VAT(item, country)) != country AS Country
-           CHECKED BY VAT[Item,Country]
-           MESSAGE 'ошибка: Шкала и страна строки должна соответствовать шкале и строке НДС : TaxItem';
+CONSTRAINT tax (VAT (Item item, Country country))! = Tax.taxVAT OR
+           country (VAT (item, country))! = country AS Country
+           CHECKED BY VAT [Item, Country]
+           MESSAGE 'error: The scale and country of the line must match the scale and the VAT line: TaxItem';
 
-valueVAT 'НДС, %' (Item item, Country country, DATE date) = valueRate(VAT(item, country), date);
+valueVAT 'VAT,%' (Item item, Country country, DATE date) = valueRate (VAT (item, country), date);
 
-VAT 'НДС' (Item item) = VAT(item, defaultCountry()) MATERIALIZED;
-numberVAT 'НДС' (Item item) = number(VAT(item));
+VAT 'VAT' (Item item) = VAT (item, defaultCountry ()) MATERIALIZED;
+numberVAT 'VAT' (Item item) = number (VAT (item));
 
-valueVAT 'НДС, %' (Item item, DATE date) = valueRate(VAT(item), date);
-valueVAT 'НДС, %' (Item item) = valueVAT(item, currentDate());
+valueVAT 'VAT,%' (Item item, DATE date) = valueRate (VAT (item), date);
+valueVAT 'VAT,%' (Item item) = valueVAT (item, currentDate ());
 
-changeNumberVAT(Item item)  { 
-    DIALOG rangeDialog OBJECTS c = defaultCountry(), r = VAT(item, defaultCountry()) INPUT NULL DO
-        VAT(item, Country country) <- r WHERE country == defaultCountry();
+changeNumberVAT (Item item) {
+    DIALOG rangeDialog OBJECTS c = defaultCountry (), r = VAT (item, defaultCountry ()) INPUT NULL DO
+        VAT (item, Country country) <- r WHERE country == defaultCountry ();
 }
-changeValueVAT(Item item)  { 
-    INPUT n = NUMERIC[10,5] DO
-        VAT(item, Country country) <- valueCurrentVAT(country, n) WHERE country == defaultCountry();
+changeValueVAT (Item item) {
+    INPUT n = NUMERIC [10,5] DO
+        VAT (item, Country country) <- valueCurrentVAT (country, n) WHERE country == defaultCountry ();
 }
 
 EXTEND FORM item
-    PROPERTIES (i, c)      numberVAT 
+    PROPERTIES (i, c) numberVAT
     PROPERTIES (i, c, dtr) valueVAT READONLY
-    PROPERTIES (i)         numberVAT ON CHANGE changeNumberVAT(i) 
-    PROPERTIES (i)         valueVAT ON CHANGE changeValueVAT(i)
+    PROPERTIES (i) numberVAT ON CHANGE changeNumberVAT (i)
+    PROPERTIES (i) valueVAT ON CHANGE changeValueVAT (i)
     FILTERGROUP filters1
-            FILTER 'Страны, у которых есть НДС' countRange (Tax.taxVAT, c) 'F11' DEFAULT
+            FILTER 'Countries that have VAT' countRange (Tax.taxVAT, c) 'F11' DEFAULT
 ;
-DESIGN item { regionPrm  { MOVE PROPERTY(numberVAT(i));  MOVE PROPERTY(valueVAT(i));} }
+DESIGN item {regionPrm {MOVE PROPERTY (numberVAT (i)); MOVE PROPERTY (valueVAT (i));}}
 
 EXTEND FORM items
-    PROPERTIES (i) READONLYIF  isReadonly() numberVAT ON CHANGE changeNumberVAT(i), 
-                                            valueVAT ON CHANGE changeValueVAT(i)    
+    PROPERTIES (i) READONLYIF isReadonly () numberVAT ON CHANGE changeNumberVAT (i),
+                                            valueVAT ON CHANGE changeValueVAT (i)
 ;
 
-overCopy(Item s, Item d) + { 
-    FOR VAT(s, Country country) DO {
-        VAT(d, country) <- VAT(s, country);
+overCopy (Item s, Item d) + {
+    FOR VAT (s, Country country) DO {
+        VAT (d, country) <- VAT (s, country);
     }
 }
 
-// Миграция
-dataVAT 'НДС' = DATA Range (Item, Country, DATE);
+// Migration
+dataVAT 'VAT' = DATA Range (Item, Country, DATE);
 
-VAT 'НДС' (Item item, Country country, DATE date) =
+VAT 'VAT' (Item item, Country country, DATE date) =
      GROUP
-           LAST dataVAT(item, country, DATE dateIn)
+           LAST dataVAT (item, country, DATE dateIn)
            ORDER dateIn
-           WHERE dataVAT(item, country, dateIn) AND dateIn <= (date AS DATE) COMPLEX;
+           WHERE dataVAT (item, country, dateIn) AND dateIn <= (date AS DATE) COMPLEX;
 
-migrateVATItem 'Перенести НДС'()  { 
-    VAT(Item item, Country country) <- VAT(item, country, currentDate()) WHERE NOT VAT(item, country);
+migrateVATItem 'Move VAT' () {
+    VAT (Item item, Country country) <- VAT (item, country, currentDate ()) WHERE NOT VAT (item, country);
 }
 EXTEND FORM migrationData
-    PROPERTIES() migrateVATItem
+    PROPERTIES () migrateVATItem
 ;
 
-//--
+// -
 dataVAT = DATA Range (Country, ItemGroup);
-numberDataVAT 'НДС, номер (по умолчанию)' (Country country, ItemGroup itemGroup) = number(dataVAT(country,itemGroup)) IN defaultItemGroup;
-valueDataVAT 'НДС, % (по умолчанию)' (Country country, ItemGroup itemGroup) = valueRate(dataVAT(country,itemGroup)) IN defaultItemGroup;
+numberDataVAT 'VAT, number (default)' (Country country, ItemGroup itemGroup) = number (dataVAT (country, itemGroup)) IN defaultItemGroup;
+valueDataVAT 'VAT,% (default)' (Country country, ItemGroup itemGroup) = valueRate (dataVAT (country, itemGroup)) IN defaultItemGroup;
 
-levelParentVAT (Country country, ItemGroup itemGroup) = GROUP MIN level(itemGroup, ItemGroup parent) IF dataVAT(country,parent) MATERIALIZED;    
-nearestParentVAT (Country country, ItemGroup itemGroup) = itemGroup(itemGroup, levelParentVAT(country,itemGroup));
-nearestVAT (Country country, ItemGroup itemGroup) = dataVAT(country, nearestParentVAT(country,itemGroup));
+levelParentVAT (Country country, ItemGroup itemGroup) = GROUP MIN level (itemGroup, ItemGroup parent) IF dataVAT (country, parent) MATERIALIZED;
+nearestParentVAT (Country country, ItemGroup itemGroup) = itemGroup (itemGroup, levelParentVAT (country, itemGroup));
+nearestVAT (Country country, ItemGroup itemGroup) = dataVAT (country, nearestParentVAT (country, itemGroup));
 
 VAT (Country country, ItemGroup itemGroup) =
-    OVERRIDE dataVAT(country,itemGroup), 
-             nearestVAT (country,itemGroup) MATERIALIZED;    
+    OVERRIDE dataVAT (country, itemGroup),
+             nearestVAT (country, itemGroup) MATERIALIZED;
 
 prevVAT (Country country, ItemGroup itemGroup) =
-    OVERRIDE dataVAT(country,itemGroup), 
-             PREV(nearestVAT (country,itemGroup));    
+    OVERRIDE dataVAT (country, itemGroup),
+             PREV (nearestVAT (country, itemGroup));
 
-numberVAT 'НДС, номер (по умолчанию)' (Country country, ItemGroup itemGroup) = number(VAT(country,itemGroup)) IN defaultItemGroup;
-prevNumberVAT 'НДС, номер (по умолчанию)' (Country country, ItemGroup itemGroup) = number(prevVAT(country,itemGroup)) IN defaultItemGroup;
+numberVAT 'VAT, number (default)' (Country country, ItemGroup itemGroup) = number (VAT (country, itemGroup)) IN defaultItemGroup;
+prevNumberVAT 'VAT, number (default)' (Country country, ItemGroup itemGroup) = number (prevVAT (country, itemGroup)) IN defaultItemGroup;
 
-valueVAT 'НДС, % (по умолчанию)' (Country country, ItemGroup itemGroup) = valueRate(VAT(country,itemGroup)) IN defaultItemGroup;
-prevValueVAT 'НДС, % (по умолчанию)' (Country country, ItemGroup itemGroup) = valueRate(prevVAT(country,itemGroup)) IN defaultItemGroup;
+valueVAT 'VAT,% (default)' (Country country, ItemGroup itemGroup) = valueRate (VAT (country, itemGroup)) IN defaultItemGroup;
+prevValueVAT 'VAT,% (default)' (Country country, ItemGroup itemGroup) = valueRate (prevVAT (country, itemGroup)) IN defaultItemGroup;
 
-assignVATItems 'Назначить всем товарам группы' (Country c, ItemGroup group)  { 
-	NEWSESSION {
-	    VAT(Item i, c) <- prevVAT(c,group) WHERE isParent(group,i);
-	    APPLY;
-	}
+assignVATItems 'Assign to all group items' (Country c, ItemGroup group) {
+  NEWSESSION {
+     VAT (Item i, c) <- prevVAT (c, group) WHERE isParent (group, i);
+     APPLY;
+  }
 } TOOLBAR CONFIRM;
 
 EXTEND FORM itemGroup
-    OBJECTS vc=Country 
-    PROPERTIES(vc)   READONLY name
-    PROPERTIES(vc,g) prevNumberVAT, prevValueVAT
-    PROPERTIES(vc,g) assignVATItems DRAW vc
+    OBJECTS vc = Country
+    PROPERTIES (vc) READONLY name
+    PROPERTIES (vc, g) prevNumberVAT, prevValueVAT
+    PROPERTIES (vc, g) assignVATItems DRAW vc
     FILTERGROUP isResidentVAT
-        FILTER 'Отечественный производитель' resident(vc) OR defaultCountry() == vc DEFAULT 
+        FILTER 'Domestic manufacturer' resident (vc) OR defaultCountry () == vc DEFAULT
 ;
 
 DESIGN itemGroup {
     defaultPane {
-        MOVE BOX(vc) { caption = 'НДС';}
-    }         
+        MOVE BOX (vc) {caption = 'VAT';}
+    }
 }
 
-WHEN LOCAL CHANGED(itemGroup(Item item)) AND Country country = defaultCountry() AND NOT VAT(item,country) DO
-    VAT(item,country) <- VAT(country, itemGroup(item));
+WHEN LOCAL CHANGED (itemGroup (Item item)) AND Country country = defaultCountry () AND NOT VAT (item, country) DO
+    VAT (item, country) <- VAT (country, itemGroup (item));
+    
