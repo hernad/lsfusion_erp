@@ -4,42 +4,42 @@ REQUIRE Employee;
 
 NAMESPACE Employee;
 
-inManager 'Вкл.' = DATA BOOLEAN (Employee, Employee);
-descriptionManagers 'Менеджеры' (Employee e) = GROUP CONCAT shortName(Employee m) IF inManager(m ,e), ',';
-countManagers (Employee e) = GROUP SUM 1 IF inManager(Employee m ,e);
+inManager 'On' = DATA BOOLEAN (Employee, Employee);
+descriptionManagers 'Managers' (Employee e) = GROUP CONCAT shortName (Employee m) IF inManager (m, e), ',';
+countManagers (Employee e) = GROUP SUM 1 IF inManager (Employee m, e);
 
-overCopy(Employee e,Employee employee) + {     
-    inManager(Employee l,e) <- inManager(l,employee) WHERE inManager(l,employee);
-    inManager(e,Employee l) <- inManager(employee,l) WHERE inManager(employee,l);        
+overCopy (Employee e, Employee employee) + {
+    inManager (Employee l, e) <- inManager (l, employee) WHERE inManager (l, employee);
+    inManager (e, Employee l) <- inManager (employee, l) WHERE inManager (employee, l);
 };
 
-FORM inManagerEmployee 'Менеджеры'
+FORM inManagerEmployee 'Managers'
     OBJECTS e = Employee GRID
     OBJECTS m = Employee
     PROPERTIES (m) READONLY lastName, firstName, shortName, nameMainRole
-    PROPERTIES (m, e) inManager    
-    FILTERGROUP include FILTER 'Включены' inManager (m, e) 'F9' 
-    FILTERGROUP active FILTER 'Активные' active(e) 'F5'  DEFAULT 
-    FILTERGROUP activem FILTER 'Активные' active(m) 'F5'  DEFAULT 
+    PROPERTIES (m, e) inManager
+    FILTERGROUP include FILTER 'Included' inManager (m, e) 'F9'
+    FILTERGROUP active FILTER 'Active' active (e) 'F5' DEFAULT
+    FILTERGROUP activem FILTER 'Active' active (m) 'F5' DEFAULT
 ;
 
-fillInManager(Employee e)  { 
-    SHOW inManagerEmployee OBJECTS e=e ;
+fillInManager (Employee e) {
+    SHOW inManagerEmployee OBJECTS e = e;
 }
 
 EXTEND FORM employee
-    PROPERTIES (e) descriptionManagers ON CHANGE fillInManager(e)
+    PROPERTIES (e) descriptionManagers ON CHANGE fillInManager (e)
 ;
 
 DESIGN employee {
-    pane { 
-        NEW manager{
-            caption = 'Менеджмент';
-            MOVE PROPERTY(descriptionManagers(e)); 
+    pane {
+        NEW manager {
+            caption = 'Management';
+            MOVE PROPERTY (descriptionManagers (e));
             NEW managerTabContainer {
                 type = TABBED;
                 fill = 1;
             }
         }
-    } 
+    }
 }
